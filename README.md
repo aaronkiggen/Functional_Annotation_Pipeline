@@ -21,3 +21,41 @@ This pipeline performs annotation in 6 distinct stages. Each stage is independen
    ```bash
    git clone https://github.com/aaronkiggen/Functional_Annotation_Pipeline.git
    cd Functional_Annotation_Pipeline
+Configure Environment: Edit the config.env file to match your cluster paths, database locations, and Conda environment names.
+
+bash
+nano config.env
+Install Dependencies: Ensure you have the following Conda environments created:
+
+kofam (KofamScan installed)
+eggnog_2025 (EggNOG-mapper installed)
+of3 (OrthoFinder installed)
+?? Usage
+Submit jobs individually using sbatch. Ensure you are in the scripts/ directory.
+
+Basic Workflow
+bash
+cd scripts/
+
+# 1. Clean input data
+sbatch 01_extract_longest_isoform.sh
+
+# 2. Run functional annotations (can run in parallel)
+sbatch 02_run_kofamscan.sh
+sbatch 03_run_interproscan.sh
+sbatch 04_run_eggnog.sh
+
+# 3. Comparative Genomics
+sbatch 05_run_orthofinder.sh
+
+# 4. Deep Learning Annotation
+sbatch 06_run_fantasia.slurm
+?? Documentation
+Detailed documentation for specific modules can be found in the docs/ folder:
+
+Preprocessing Guide
+Functional Annotation Details
+?? Future Work
+ Downstream Analysis: R scripts for parsing and visualizing annotation density.
+ Integration: Merging GFF3 files from all tools into a consensus annotation.
+Maintained by Aaron Kiggen
