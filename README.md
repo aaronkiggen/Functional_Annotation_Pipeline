@@ -54,7 +54,57 @@ sbatch 06_run_fantasia.slurm
 Detailed documentation for specific modules can be found in the docs/ folder:
 
 Preprocessing Guide
+---
+
+### **4. Component READMEs (docs/)**
+
+Create these files inside the `docs/` folder.
+
+```markdown name=docs/01_preprocessing.md
+# Step 01: Preprocessing
+
+## Extraction of Longest Isoforms
+Many annotation tools perform better when redundancy is reduced. This step takes a raw protein FASTA file (containing all isoforms) and filters it to retain only the longest transcript per gene.
+
+### Input
+- **File**: `*.faa` (Protein FASTA)
+- **Format**: Standard FASTA headers.
+
+### Output
+- **Folder**: `primary_transcripts/`
+- **File**: Filtered FASTA file used for all subsequent steps.
+
+
 Functional Annotation Details
+# Functional Annotation Modules
+
+## Step 02: KofamScan
+Uses HMM profiles to map proteins to KEGG Orthologs (KOs).
+- **Database**: KofamKOALA profiles
+- **Output**: Mapper TSV file
+
+## Step 03: InterProScan
+Runs a battery of analyses (Pfam, TIGRFAM, etc.) to find domains.
+- **Resource Intensive**: This step requires significant CPU time.
+- **Output**: TSV, XML, and GFF3 formats.
+
+## Step 04: EggNOG-mapper
+Fast orthology assignment using precomputed clusters.
+- **Taxonomic Scope**: Arthropoda (configurable in `config.env`)
+- **Output**: Excel file, annotations file, and orthologs report.
+
+# Step 06: FANTASIA (AI Annotation)
+
+FANTASIA uses Large Language Models (LLMs) and vector databases to perform functional annotation.
+
+### Requirements
+- **Hardware**: NVIDIA GPU (A100/H100 recommended)
+- **Software**: Apptainer (Singularity)
+- **Services**: PostgreSQL (pgvector) and RabbitMQ run as sidecars within the job.
+
+### Configuration
+Ensure the `fantasia/config.yaml` points to the correct model weights and database paths before submission.
+
 ?? Future Work
  Downstream Analysis: R scripts for parsing and visualizing annotation density.
  Integration: Merging GFF3 files from all tools into a consensus annotation.
