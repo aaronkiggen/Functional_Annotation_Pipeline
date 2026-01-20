@@ -88,7 +88,7 @@ Complete guide covering three complementary annotation tools:
 - **InterProScan**: Domain and motif detection (Pfam, TIGRFAM, SUPERFAMILY, etc.)
 - **EggNOG-mapper**: Fast orthology and GO term annotation
 - Includes performance optimization, output parsing, and integration strategies
-- **Runtime**: 1-5 days (combined)
+- **Runtime**: 5-8 hours in parallel 
 
 ### Step 05: Comparative Genomics
 **📄 [OrthoFinder Guide](docs/05_orthofinder.md)**
@@ -99,7 +99,7 @@ Phylogenetic orthology inference and comparative genomics analysis:
 - Gene duplication detection
 - Core genome identification
 - Gene family expansion analysis
-- **Runtime**: 6 hours - 5 days (depending on dataset size)
+- **Runtime**: 2 hours (depending on dataset size)
 
 ### Step 06: AI-Driven Annotation
 **📄 [FANTASIA Setup](docs/06_fantasia.md)**
@@ -109,7 +109,7 @@ Advanced GPU-accelerated functional annotation using Large Language Models:
 - PostgreSQL with pgvector setup
 - LLM model configuration
 - Integration with traditional annotations
-- **Runtime**: 4-48 hours (GPU-dependent)
+- **Runtime**: 4-15 hours (GPU-dependent)
 
 ## 📊 Expected Results
 
