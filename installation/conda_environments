@@ -2,9 +2,65 @@
 conda create -n kofam python=3.9
 conda install -c bioconda kofamscan hmmer
 
-# 2. EggNOG-mapper environment
+BASE=/lustre1/scratch/354/vsc35429
+DB=${BASE}/KOSCAN
+
+
+mkdir -p "${DB}"
+cd "${DB}"
+
+# Download KOfam database
+wget ftp://ftp.genome.jp/pub/db/kofam/profiles.tar.gz
+wget ftp://ftp.genome.jp/pub/db/kofam/ko_list.gz
+
+# Decompress
+tar -xzf profiles.tar.gz
+gunzip ko_list.gz
+
+
+# 2. EggNOG-mapper db5 environment
 conda create -n eggnog_2025 python=3.10
-conda install -c bioconda eggnog-mapper
+conda install -c bioconda -c conda-forge eggnog-mapper
+
+
+cd Functional_Annotation_Pipeline/installation
+EGGNOG_DB_V5=${BASE}/EGGNOG_DB_V5
+
+mkdir -p "${EGGNOG_DB_V5}"
+
+export EGGNOG_DATA_DIR=${EGGNOG_DB_V5}
+download_eggnog_data.py 
+
+
+
+
+# 3. EggNOG-mapper db7 
+EGGNOG_DB_V7=${BASE}/EGGNOG_DB_V7
+
+mkdir -p "${EGGNOG_DB_V7}"
+
+cd "${EGGNOG_DB_V7}"
+
+# The master search table
+wget https://a3s.fi/eggnog7_annotator/eggnog7_20251223_master_search_table.tsv.gz
+wget https://a3s.fi/eggnog7_annotator/eggnog7_20251223_master_search_table.tsv.gz.md5
+md5sum -c eggnog7_20251223_master_search_table.tsv.gz.md5
+
+# The protein search diamond database
+wget https://a3s.fi/eggnog7_annotator/eggnog7_20251223_proteins.dmnd
+wget https://a3s.fi/eggnog7_annotator/eggnog7_20251223_proteins.dmnd.md5
+md5sum -c eggnog7_20251223_proteins.dmnd.md5
+
+# Optional: test data
+wget https://a3s.fi/eggnog7_annotator/test.fa
+wget https://a3s.fi/eggnog7_annotator/test.fa.md5
+md5sum -c test.fa.md5
+
+
+
+
+
+
 
 # 3. OrthoFinder environment
 conda create -n of3 python=3.9
