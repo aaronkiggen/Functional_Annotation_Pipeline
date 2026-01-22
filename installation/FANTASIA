@@ -1,0 +1,26 @@
+git clone https://github.com/CBBIO/FANTASIA.git
+cd FANTASIA
+
+#Choose the appropriate script based on your computing environment (e.g., CESGA or Greisenwald) and the desired workload (single job or job array). Each script launches PostgreSQL, RabbitMQ, and the FANTASIA pipeline inside containers using either Apptainer or Singularity, depending on the cluster. 
+#You can use these scripts as a template to adapt the workflow to your own HPC environment.
+
+#We use fantasia.slurm which is the CESGA (SLURM GPU partition) adapted to work on the Vlaams Supercomputer Centrum (VSC) but should also work on similar infrastructures.
+#Apptainer is required to run this script
+#see https://fantasia.readthedocs.io/en/latest/deployment/cesga_job.html to understand how the script works
+
+#FANTASIA is primarily configured via a YAML file located at:
+config/config.yaml
+
+#This file allows you to specify key execution parameters, including:
+
+#Input FASTA path
+#input: /project/inputs/GCA_030254905.1_UOB_LRV0_1_protein.faa  # change it to where your protein.faa file is
+
+#Output prefix
+#prefix: Daphnia_magna_LRVO1 # str | change it to your organism of choice
+
+#These are the only setting one should change to run FANTASIA in default settings which is recommended (https://fantasia.readthedocs.io/en/latest/method/experiments_setup.html) 
+
+
+
+
