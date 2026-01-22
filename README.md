@@ -57,13 +57,13 @@ Ensure you have the following Conda environments created:
 
 Ensure you ran the installation scripts for:
 
-- InterProScan
-- FANTASIA
+- 'InterProScan'
+- 'FANTASIA'
 
 Ensure you have the right databases installed and that these are accessible
-- KofamKOALA
-- InterProScan
-- EggNOG
+- 'KofamKOALA'
+- 'InterProScan'
+- 'EggNOG'
 
 
 For detailed installation instructions for each tool, see the respective readthedocs of the tools used. 
