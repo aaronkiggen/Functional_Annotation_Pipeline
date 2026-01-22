@@ -1,3 +1,9 @@
+BASE=/lustre1/scratch/354/vsc35429
+cd "${BASE}"
+
+DB=${BASE}/
+
+
 git clone https://github.com/CBBIO/FANTASIA.git
 cd FANTASIA
 
