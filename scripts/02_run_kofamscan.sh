@@ -1,31 +1,45 @@
 #!/bin/bash -l
-#SBATCH --job-name=01_isoform
+#SBATCH --job-name=kofam
 #SBATCH --cluster=genius
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --time=02:00:00
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+#SBATCH --time=06:00:00
 #SBATCH -A lp_svbelleghem
-#SBATCH --output=logs/%x_%j.out
-#SBATCH --error=logs/%x_%j.err
+#SBATCH --output=kofam_LRV01.%j.out
+#SBATCH --error=kofam_LRV01.%j.err
 
-# Load config
-source ../config.env
+echo "[INFO] Job started on $(date)"
 
-SPECIES="LRV01"
-TARGET_DIR="${INPUT_DIR}/${SPECIES}"
-FAA_FILE="${TARGET_DIR}/GCA_030254905.1_UOB_LRV0_1_protein.faa"
-HELPER_SCRIPT="$(pwd)/helper/primary_transcript.py"
+# ------------------
+# Activate conda
+# ------------------
+source /vsc-hard-mounts/leuven-data/354/vsc35429/miniconda3/etc/profile.d/conda.sh
+conda activate kofam
 
-echo "[INFO] Starting longest ORF selection for ${SPECIES}"
+# ------------------
+# Paths
+# ------------------
 
-if [[ ! -f "${FAA_FILE}" ]]; then
-    echo "ERROR: Input file ${FAA_FILE} not found" >&2
-    exit 1
-fi
+BASE=/lustre1/scratch/354/vsc35429
+KOFAM=${BASE}/KOSCAN/kofam_scan
+DB=${BASE}/KOSCAN
+INPUT=${BASE}/Daphnia_magna_annotation/input/LRV01/primary_transcripts
+OUT=${BASE}/Daphnia_magna_annotation/outputs/results/kofam  # <-- fixed
 
-mkdir -p "${TARGET_DIR}/primary_transcripts"
+# Make sure output exists
+mkdir -p "${OUT}"
 
-# Run extraction
-python "${HELPER_SCRIPT}" "${FAA_FILE}"
+# ------------------
+# Run KofamScan
+# ------------------
+exec_annotation -p ${DB}/profiles/eukaryote.hal \
+                -k ${DB}/ko_list \
+                -f mapper \
+                -o ${OUT}/LRV01_kofam_mapper.tsv \
+                ${INPUT}/GCA_030254905.1_UOB_LRV0_1_protein.faa \
+                --cpu=16 \
+                --tmp-dir ${BASE}/KOSCAN/tmp
 
-echo "[DONE] Primary transcripts extracted."
+echo "[INFO] Job finished on $(date)"
