@@ -1,10 +1,10 @@
 # Functional Annotation Pipeline
 
-A modular HPC pipeline for comprehensive functional annotation of genomic protein data.  This repository contains a suite of SLURM scripts designed to run on VSC (Flemish Supercomputer Center) infrastructure.
+A modular HPC pipeline for comprehensive functional annotation of genomic protein data.  This repository contains a suite of SLURM scripts designed to run on High-Performance Computing (HPC) cluster infrastructure.
 
 ## 🔄 Pipeline Overview
 
-This pipeline performs annotation in 6 distinct stages.  Each stage is independent but designed to work sequentially on the output of previous steps.  
+This pipeline performs annotation in 6 distinct stages. Each stage is independent but will be integrated in the final step to perform a coherent, unified functional annotation across tools
 
 | Step | Tool | Description |
 | :--- | :--- | :--- |
@@ -14,6 +14,7 @@ This pipeline performs annotation in 6 distinct stages.  Each stage is independe
 | **04** | **EggNOG-mapper** | Orthology prediction and functional annotation |
 | **05** | **OrthoFinder** | Phylogenetic orthology inference |
 | **06** | **FANTASIA** | AI-driven functional annotation (GPU accelerated) |
+| **07** | **INTEGRATION** | functional annotation integration and generation of output files |
 
 ## 📦 Installation & Setup
 
