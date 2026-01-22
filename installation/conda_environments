@@ -1,1 +1,12 @@
+# 1. KofamScan environment
+conda create -n kofam python=3.9
+conda install -c bioconda kofamscan hmmer
+
+# 2. EggNOG-mapper environment
+conda create -n eggnog_2025 python=3.10
+conda install -c bioconda eggnog-mapper
+
+# 3. OrthoFinder environment
+conda create -n of3 python=3.9
+conda install -c bioconda orthofinder diamond mcl
 
