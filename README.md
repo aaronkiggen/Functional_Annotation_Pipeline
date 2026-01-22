@@ -16,6 +16,20 @@ This pipeline performs annotation in 6 distinct stages. Each stage is independen
 | **06** | **FANTASIA** | AI-driven functional annotation (GPU accelerated) |
 | **07** | **INTEGRATION** | functional annotation integration and generation of output files |
 
+## ⚙️ Requirements
+
+### System Requirements
+
+This pipeline is designed to run on **SLURM-managed HPC clusters**. It has been tested on the **VSC (Flemish Supercomputer Center)** infrastructure with access to sufficient memory, CPUs and GPUs but should work on any modern HPC system with SLURM. 
+
+**Supported GPUs:**
+- ✅ NVIDIA H100 (optimal for large-scale annotations)
+- ✅ NVIDIA A100 (40 GB or 80 GB) - **Recommended**
+- ✅ NVIDIA V100 (32 GB) - Minimum for FANTASIA
+- ⚠️ NVIDIA RTX 4090/3090 (24 GB) - Works for small datasets only
+- ❌ AMD GPUs - Not currently supported
+
+
 ## 📦 Installation & Setup
 
 ### 1. Clone the repository
