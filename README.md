@@ -83,7 +83,9 @@ sbatch 01_extract_longest_isoform.sh
 # 2. Run functional annotations (can run in parallel)
 sbatch 02_run_kofamscan.sh
 sbatch 03_run_interproscan.sh
-sbatch 04_run_eggnog. sh
+sbatch 04_run_eggnog.sh
+sbatch 04_run_eggnog.sh
+sbatch 04_2_run_eggnog7_annotator.sh
 
 # 3. Comparative Genomics
 sbatch 05_run_orthofinder.sh
@@ -91,6 +93,13 @@ sbatch 05_run_orthofinder.sh
 # 4. Deep Learning Annotation
 sbatch 06_run_fantasia.slurm
 ```
+
+# 5. Functional evidence integration and output generation
+
+```bash
+
+```
+
 
 ## 📖 Documentation
 
