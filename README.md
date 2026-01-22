@@ -94,7 +94,7 @@ sbatch 05_run_orthofinder.sh
 sbatch 06_run_fantasia.slurm
 ```
 
-# 5. Functional evidence integration and output generation
+### 5. Functional evidence integration and output generation
 
 ```bash
 
