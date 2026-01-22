@@ -47,7 +47,7 @@ Edit the `config.env` file to match your cluster paths, database locations, and 
 nano config.env
 ```
 
-### 3. Install Dependencies
+### 3. Install Dependencies in **📄 [Installation Guide](installation)** 
 
 Ensure you have the following Conda environments created:
 
@@ -55,10 +55,16 @@ Ensure you have the following Conda environments created:
 - `eggnog_2025` (EggNOG-mapper and dependencies installed)
 - `of3` (OrthoFinder and dependencies installed)
 
-Ensure you ran the installation scripts in **📄 [Installation Guide](installation)** for:
+Ensure you ran the installation scripts for:
 
 - InterProScan
 - FANTASIA
+
+Ensure you have the right databases installed and that these are accessible
+- KofamKOALA
+- InterProScan
+- EggNOG
+
 
 For detailed installation instructions for each tool, see the respective readthedocs of the tools used. 
 
