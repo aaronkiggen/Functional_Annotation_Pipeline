@@ -156,22 +156,6 @@ After running the complete pipeline, you will have:
 - [ ] **Automated Testing**: CI/CD pipeline for validation
 - [ ] **Containerization**: Docker/Singularity images for easier deployment
 
-## 💡 Tips & Best Practices
-
-### Resource Management
-- **Steps 02-04 can run in parallel** to save time
-- **Step 03 (InterProScan)** is the most time-consuming; consider splitting large datasets
-- **Step 06 (FANTASIA)** requires GPU allocation; submit during off-peak hours
-
-### Data Quality
-- Always run **Step 01 (preprocessing)** first to ensure clean input
-- Verify input FASTA headers are properly formatted
-- Check intermediate outputs before proceeding to next steps
-
-### Storage Requirements
-- **Databases**: ~500 GB (KofamKOALA, EggNOG, InterProScan)
-- **Results per species**: 10-50 GB (depending on proteome size)
-- **Temporary files**: Can reach 100+ GB during InterProScan runs
 
 ## 📝 Citation
 
