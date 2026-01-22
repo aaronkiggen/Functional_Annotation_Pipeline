@@ -1,8 +1,13 @@
+BASE=/lustre1/scratch/354/vsc35429
+
+
+
+
+
 # 1. KofamScan environment
 conda create -n kofam python=3.9
 conda install -c bioconda kofamscan hmmer
 
-BASE=/lustre1/scratch/354/vsc35429
 DB=${BASE}/KOSCAN
 
 
