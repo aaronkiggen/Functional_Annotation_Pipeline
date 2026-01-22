@@ -30,11 +30,35 @@ PGDATA_HOST="$EXEC_DIR/pgdata_pgvector"
 PG_RUN="$EXEC_DIR/pg_run"
 mkdir -p "$RABBITMQ_DATA_DIR" "$PGDATA_HOST" "$PG_RUN"
 
+
+# =======================
+# Build containers if not present
+# =======================
+if [ ! -f "$PGVECTOR_IMAGE" ]; then
+    echo "ðŸ”¨ Building pgvector container..."
+    apptainer build "$PGVECTOR_IMAGE" docker://pgvector/pgvector:pg16
+fi
+
+if [ ! -f "$RABBITMQ_IMAGE" ]; then
+    echo "ðŸ”¨ Building RabbitMQ container..."
+    apptainer build "$RABBITMQ_IMAGE" docker://rabbitmq:management
+fi
+
+if [ ! -f "$FANTASIA_IMAGE" ]; then
+    echo "ðŸ”¨ Building FANTASIA container..."
+    apptainer build --disable-cache "$FANTASIA_IMAGE" docker://frapercan/fantasia:latest
+fi
+
+
 echo "[INFO] Starting Services..."
 nohup apptainer run --env POSTGRES_USER=usuario --env POSTGRES_PASSWORD=clave --env POSTGRES_DB="BioData" --bind "$PGDATA_HOST:/var/lib/postgresql/data" --bind "$PG_RUN:/var/run/postgresql" "$PGVECTOR_IMAGE" > "$LOG_DIR/postgres.log" 2>&1 &
 nohup apptainer run --bind "$RABBITMQ_DATA_DIR:/var/lib/rabbitmq" "$RABBITMQ_IMAGE" > "$LOG_DIR/rabbitmq.log" 2>&1 &
 
 sleep 30
+
+
+echo "[INFO] Initialize Fantasia..."
+apptainer exec --nv --bind "$EXEC_DIR:/fantasia" "$FANTASIA_IMAGE" fantasia initialize
 
 echo "[INFO] Running Fantasia..."
 apptainer exec --nv --bind "$EXEC_DIR:/fantasia" --bind "$PROJECT_DIR:/project" "$FANTASIA_IMAGE" fantasia run --config "/project/fantasia/config.yaml"
