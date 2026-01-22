@@ -37,11 +37,16 @@ nano config.env
 
 Ensure you have the following Conda environments created:
 
-- `kofam` (KofamScan installed)
-- `eggnog_2025` (EggNOG-mapper installed)
-- `of3` (OrthoFinder installed)
+- `kofam` (KofamScan and dependencies installed)
+- `eggnog_2025` (EggNOG-mapper and dependencies installed)
+- `of3` (OrthoFinder and dependencies installed)
 
-For detailed installation instructions for each tool, see the respective documentation guides below.
+Ensure you ran the installation scripts in **📄 [Installation Guide](installation)** for:
+
+- InterProScan
+- FANTASIA
+
+For detailed installation instructions for each tool, see the respective readthedocs of the tools used. 
 
 ## 🚀 Usage
 
