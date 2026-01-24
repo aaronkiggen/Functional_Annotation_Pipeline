@@ -1,13 +1,10 @@
-BASE=/lustre1/scratch/354/vsc35429
+BASE="${HOME}/tools"
 
+mkdir -p "${BASE}"
 cd "${BASE}"
-
-# Change to the git repos
-mkdir -p eggnog7_annotator
-cd eggnog7_annotator
 
 # clone it to the folder
 git clone https://github.com/fischuu/eggnog7_annotator.git
 
 # Export it to make the command system-wide available
-export PATH="/lustre1/scratch/354/vsc35429/eggnog7_annotator/eggnog7_annotator:$PATH"
+export PATH="${BASE}/eggnog7_annotator:$PATH"
