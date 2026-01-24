@@ -1,4 +1,6 @@
-BASE=/lustre1/scratch/354/vsc35429
+BASE="${HOME}/databases"
+
+mkdir -p "${BASE}"
 
 
 
@@ -8,7 +10,7 @@ BASE=/lustre1/scratch/354/vsc35429
 conda create -n kofam python=3.9
 conda install -c bioconda kofamscan hmmer
 
-DB=${BASE}/KOSCAN
+DB=${BASE}/kofamscan
 
 
 mkdir -p "${DB}"
@@ -29,7 +31,7 @@ conda install -c bioconda -c conda-forge eggnog-mapper
 
 
 cd Functional_Annotation_Pipeline/installation
-EGGNOG_DB_V5=${BASE}/EGGNOG_DB_V5
+EGGNOG_DB_V5=${BASE}/eggnog
 
 mkdir -p "${EGGNOG_DB_V5}"
 
@@ -40,7 +42,7 @@ download_eggnog_data.py
 
 
 # 3. EggNOG-mapper db7 
-EGGNOG_DB_V7=${BASE}/EGGNOG_DB_V7
+EGGNOG_DB_V7=${BASE}/eggnog7
 
 mkdir -p "${EGGNOG_DB_V7}"
 

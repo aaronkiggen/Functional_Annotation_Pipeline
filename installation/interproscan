@@ -1,5 +1,5 @@
-mkdir my_interproscan
-cd my_interproscan
+mkdir -p "${HOME}/tools"
+cd "${HOME}/tools"
 wget https://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.76-107.0/interproscan-5.76-107.0-64-bit.tar.gz
 wget https://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.76-107.0/interproscan-5.76-107.0-64-bit.tar.gz.md5
 
