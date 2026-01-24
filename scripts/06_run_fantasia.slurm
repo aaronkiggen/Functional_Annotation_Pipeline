@@ -23,7 +23,6 @@ else
 fi
 
 # Variables derived from config.env
-PROJECT_DIR="${PROJECT_ROOT}"
 IMG_DIR="$(dirname "${FANTASIA_CONTAINER}")"
 EXEC_DIR="${PROJECT_ROOT}/fantasia"
 # LOG_DIR is already set in config.env
@@ -34,7 +33,7 @@ FANTASIA_IMAGE="${FANTASIA_CONTAINER}"
 CONFIG_FILE="${FANTASIA_CONFIG}"
 
 mkdir -p "$LOG_DIR"
-cd "$PROJECT_DIR" || exit 1
+cd "$PROJECT_ROOT" || exit 1
 
 # Services Setup
 RABBITMQ_DATA_DIR="${EXEC_DIR}/rabbitmq"
