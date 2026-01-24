@@ -1,26 +1,135 @@
-mkdir -p "${HOME}/tools"
-cd "${HOME}/tools"
+#!/bin/bash
+################################################################################
+# Functional Annotation Pipeline - InterProScan Installation
+# 
+# Author: Aaron Kiggen
+# Repository: aaronkiggen/Functional_Annotation_Pipeline
+#
+# Description: Downloads and sets up InterProScan for domain and motif analysis
+#
+# Usage: Run this script on the login node of your HPC cluster
+#        bash interproscan
+#
+# Note: This script uses paths defined in config.env
+#       InterProScan will be installed to ${HOME}/tools by default
+################################################################################
+
+# Source configuration file to use consistent paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+CONFIG_FILE="${PROJECT_ROOT}/config.env"
+
+if [ -f "${CONFIG_FILE}" ]; then
+    echo "✓ Sourcing configuration from ${CONFIG_FILE}"
+    source "${CONFIG_FILE}"
+fi
+
+# Set installation directory (use INTERPROSCAN_HOME from config if available)
+if [ -n "${INTERPROSCAN_HOME}" ]; then
+    INSTALL_DIR="$(dirname "${INTERPROSCAN_HOME}")"
+else
+    INSTALL_DIR="${HOME}/tools"
+fi
+
+echo ""
+echo "============================================================"
+echo " Installing InterProScan"
+echo "============================================================"
+echo ""
+echo "Installation directory: ${INSTALL_DIR}"
+echo "InterProScan version: 5.76-107.0"
+echo ""
+
+# Create tools directory
+echo "Creating installation directory..."
+mkdir -p "${INSTALL_DIR}"
+cd "${INSTALL_DIR}"
+
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 1: Downloading InterProScan"
+echo "------------------------------------------------------------"
+echo ""
+echo "Downloading InterProScan archive (this is a large file ~11GB)..."
 wget https://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.76-107.0/interproscan-5.76-107.0-64-bit.tar.gz
+
+echo ""
+echo "Downloading checksum file..."
 wget https://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.76-107.0/interproscan-5.76-107.0-64-bit.tar.gz.md5
 
-# Recommended checksum to confirm the download was successful:
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 2: Verifying Download"
+echo "------------------------------------------------------------"
+echo ""
+echo "Verifying checksum (this ensures the download was successful)..."
 md5sum -c interproscan-5.76-107.0-64-bit.tar.gz.md5
-# Must return *interproscan-5.76-107.0-64-bit.tar.gz: OK*
-# If not - try downloading the file again as it may be a corrupted copy.
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "✗ Error: Checksum verification failed!"
+    echo "  The download may be corrupted. Please run this script again."
+    exit 1
+fi
+echo "✓ Checksum verified successfully!"
 
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 3: Extracting Archive"
+echo "------------------------------------------------------------"
+echo ""
+echo "Extracting InterProScan (this may take several minutes)..."
+echo "  Options used:"
+echo "    p = preserve file permissions"
+echo "    x = extract files from archive"
+echo "    v = verbosely list files processed"
+echo "    z = filter archive through gzip"
+echo "    f = use archive file"
 tar -pxvzf interproscan-5.76-107.0-*-bit.tar.gz
 
-# where:
-#     p = preserve the file permissions
-#     x = extract files from an archive
-#     v = verbosely list the files processed
-#     z = filter the archive through gzip
-#     f = use archive file
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 4: Indexing HMM Models"
+echo "------------------------------------------------------------"
+echo ""
+echo "Entering InterProScan directory..."
+cd interproscan-5.76-107.0
 
-
-#This command will press and index the hmm models to prepare them into a format used by hmmscan.
+echo ""
+echo "Preparing and indexing HMM models (this may take 10-20 minutes)..."
+echo "This command will press and index the HMM models to prepare them"
+echo "into a format used by hmmscan."
 python3 setup.py -f interproscan.properties
 
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 5: Testing Installation"
+echo "------------------------------------------------------------"
+echo ""
+echo "Running InterProScan test to verify installation..."
+./interproscan.sh --help
 
-#test
-./interproscan.sh
+if [ $? -eq 0 ]; then
+    echo ""
+    echo "✓ InterProScan test successful!"
+else
+    echo ""
+    echo "⚠ Warning: InterProScan test failed. Please check the error messages above."
+fi
+
+echo ""
+echo "============================================================"
+echo " InterProScan Installation Complete!"
+echo "============================================================"
+echo ""
+echo "Installation location: ${INSTALL_DIR}/interproscan-5.76-107.0"
+echo ""
+echo "Update your config.env with:"
+echo "  INTERPROSCAN_HOME=\"${INSTALL_DIR}/interproscan-5.76-107.0\""
+echo ""
+echo "To run InterProScan:"
+echo "  ${INSTALL_DIR}/interproscan-5.76-107.0/interproscan.sh -i <input.faa> -o <output>"
+echo ""
+echo "For detailed usage, see:"
+echo "  ${INSTALL_DIR}/interproscan-5.76-107.0/interproscan.sh --help"
+echo ""
+################################################################################
