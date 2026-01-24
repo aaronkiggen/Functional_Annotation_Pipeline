@@ -28,7 +28,7 @@ fi
 if [ -n "${VSC_SCRATCH}" ]; then
     INSTALL_DIR="${VSC_SCRATCH}"
 else
-    INSTALL_DIR="/lustre1/scratch/354/vsc35429"
+    INSTALL_DIR="${HOME}/scratch"
     echo "⚠ Warning: VSC_SCRATCH not set. Using default: ${INSTALL_DIR}"
 fi
 

@@ -140,9 +140,9 @@ source ~/.bashrc
 - Verify you have sufficient disk space
 
 ### Permission errors
-Make sure scripts are executable:
+Make sure scripts are executable (run from project root):
 ```bash
-chmod +x environments_and_databases interproscan eggnog7_annotator FANTASIA
+chmod +x installation/environments_and_databases installation/interproscan installation/eggnog7_annotator installation/FANTASIA
 ```
 
 ## Additional Resources

@@ -49,11 +49,17 @@ echo " Step 1: Setting up KofamScan"
 echo "------------------------------------------------------------"
 echo ""
 echo "Creating Conda environment 'kofam' with Python 3.9..."
-conda create -n kofam python=3.9 -y
+if ! conda create -n kofam python=3.9 -y; then
+    echo "✗ Error: Failed to create kofam environment"
+    exit 1
+fi
 
 echo ""
 echo "Installing KofamScan and HMMER..."
-conda install -n kofam -c bioconda kofamscan hmmer -y
+if ! conda install -n kofam -c bioconda kofamscan hmmer -y; then
+    echo "✗ Error: Failed to install KofamScan and HMMER"
+    exit 1
+fi
 
 echo ""
 echo "Downloading KofamScan database to ${KOFAM_DB:-${DB_ROOT}/kofamscan}..."
@@ -84,11 +90,17 @@ echo " Step 2: Setting up EggNOG-mapper v5"
 echo "------------------------------------------------------------"
 echo ""
 echo "Creating Conda environment 'eggnog_2025' with Python 3.10..."
-conda create -n eggnog_2025 python=3.10 -y
+if ! conda create -n eggnog_2025 python=3.10 -y; then
+    echo "✗ Error: Failed to create eggnog_2025 environment"
+    exit 1
+fi
 
 echo ""
 echo "Installing EggNOG-mapper..."
-conda install -n eggnog_2025 -c bioconda -c conda-forge eggnog-mapper -y
+if ! conda install -n eggnog_2025 -c bioconda -c conda-forge eggnog-mapper -y; then
+    echo "✗ Error: Failed to install EggNOG-mapper"
+    exit 1
+fi
 
 echo ""
 echo "Downloading EggNOG v5 database to ${DB_ROOT}/eggnog..."
@@ -100,7 +112,10 @@ echo "  - Database location: ${EGGNOG_DATA_DIR}"
 echo "  - Running download_eggnog_data.py (this may take a while)..."
 echo ""
 cd "${PROJECT_ROOT}/installation"
-python3 download_eggnog_data.py -y
+if ! conda run -n eggnog_2025 python3 download_eggnog_data.py -y; then
+    echo "✗ Error: Failed to download EggNOG database"
+    exit 1
+fi
 
 echo "✓ EggNOG-mapper v5 setup complete!"
 
@@ -152,11 +167,17 @@ echo " Step 4: Setting up OrthoFinder"
 echo "------------------------------------------------------------"
 echo ""
 echo "Creating Conda environment 'of3' with Python 3.9..."
-conda create -n of3 python=3.9 -y
+if ! conda create -n of3 python=3.9 -y; then
+    echo "✗ Error: Failed to create of3 environment"
+    exit 1
+fi
 
 echo ""
 echo "Installing OrthoFinder, Diamond, and MCL..."
-conda install -n of3 -c bioconda orthofinder diamond mcl -y
+if ! conda install -n of3 -c bioconda orthofinder diamond mcl -y; then
+    echo "✗ Error: Failed to install OrthoFinder, Diamond, and MCL"
+    exit 1
+fi
 
 echo "✓ OrthoFinder setup complete!"
 
