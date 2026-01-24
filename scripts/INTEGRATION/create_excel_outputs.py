@@ -377,6 +377,68 @@ class EggNOG7Parser(AnnotationParser):
                             })
 
 
+class FantasiaParser(AnnotationParser):
+    """Parser for FANTASIA AI-driven annotation output files"""
+    
+    def parse(self):
+        """
+        Parse FANTASIA TSV format:
+        Columns: protein_id, predicted_function, confidence, top_similar_protein
+        """
+        self.results = []
+        
+        if not os.path.exists(self.input_file):
+            print(f"Warning: File not found: {self.input_file}")
+            return
+        
+        with open(self.input_file, 'r') as f:
+            header_line = None
+            for line in f:
+                # Skip comments
+                if line.startswith('#'):
+                    continue
+                
+                # First non-comment line is header
+                if header_line is None:
+                    header_line = line.strip().split('\t')
+                    continue
+                
+                parts = line.strip().split('\t')
+                
+                if len(parts) < len(header_line):
+                    continue
+                
+                # Create dictionary from header and values
+                row_dict = dict(zip(header_line, parts))
+                
+                gene_name = row_dict.get('protein_id', '')
+                predicted_function = row_dict.get('predicted_function', '')
+                confidence = row_dict.get('confidence', '')
+                top_similar_protein = row_dict.get('top_similar_protein', '')
+                
+                # Skip if no predicted function
+                if not predicted_function or predicted_function == '-':
+                    continue
+                
+                # The predicted function is the functional term
+                functional_term = predicted_function
+                
+                # Build extra information from confidence and similar protein
+                extra_parts = []
+                if confidence:
+                    extra_parts.append(f"Confidence: {confidence}")
+                if top_similar_protein and top_similar_protein != '-':
+                    extra_parts.append(f"Similar: {top_similar_protein}")
+                
+                extra_info = "; ".join(extra_parts)
+                
+                self.results.append({
+                    'gene_name': gene_name,
+                    'functional_term': functional_term,
+                    'extra_information': extra_info
+                })
+
+
 def find_files(directory: str, pattern: str) -> List[str]:
     """Find files matching a pattern in a directory"""
     path = Path(directory)
@@ -503,6 +565,35 @@ def process_eggnog(results_dir: str, output_dir: str):
         print("Warning: No EggNOG directories found")
 
 
+def process_fantasia(results_dir: str, output_dir: str):
+    """Process all FANTASIA output files"""
+    print("\n" + "="*60)
+    print("Processing FANTASIA Results")
+    print("="*60)
+    
+    fantasia_dir = os.path.join(results_dir, 'fantasia')
+    if not os.path.exists(fantasia_dir):
+        print(f"Warning: FANTASIA directory not found: {fantasia_dir}")
+        return
+    
+    # Find all TSV files (FANTASIA outputs annotations.tsv)
+    tsv_files = find_files(fantasia_dir, '*.tsv')
+    
+    if not tsv_files:
+        print("No FANTASIA TSV files found")
+        return
+    
+    print(f"Found {len(tsv_files)} FANTASIA file(s)")
+    
+    for tsv_file in tsv_files:
+        basename = os.path.basename(tsv_file).replace('.tsv', '')
+        output_file = os.path.join(output_dir, f"{basename}_fantasia_annotations.xlsx")
+        
+        parser = FantasiaParser(tsv_file)
+        parser.parse()
+        parser.save_to_excel(output_file)
+
+
 def main():
     """Main function"""
     parser = argparse.ArgumentParser(
@@ -520,6 +611,7 @@ Examples:
   %(prog)s --kofamscan-only
   %(prog)s --interproscan-only
   %(prog)s --eggnog-only
+  %(prog)s --fantasia-only
         """
     )
     
@@ -553,6 +645,12 @@ Examples:
         help='Process only EggNOG-mapper results'
     )
     
+    parser.add_argument(
+        '--fantasia-only',
+        action='store_true',
+        help='Process only FANTASIA results'
+    )
+    
     args = parser.parse_args()
     
     # Resolve paths
@@ -574,7 +672,7 @@ Examples:
         sys.exit(1)
     
     # Process tools based on flags
-    process_all = not any([args.kofamscan_only, args.interproscan_only, args.eggnog_only])
+    process_all = not any([args.kofamscan_only, args.interproscan_only, args.eggnog_only, args.fantasia_only])
     
     if process_all or args.kofamscan_only:
         process_kofamscan(results_dir, output_dir)
@@ -584,6 +682,9 @@ Examples:
     
     if process_all or args.eggnog_only:
         process_eggnog(results_dir, output_dir)
+    
+    if process_all or args.fantasia_only:
+        process_fantasia(results_dir, output_dir)
     
     print("\n" + "="*60)
     print("Excel Generation Complete")

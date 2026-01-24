@@ -34,6 +34,11 @@ The script processes outputs from:
    - Functional terms: GO terms and KEGG KO identifiers
    - Extra information: Protein descriptions, best hits, E-values
 
+4. **FANTASIA** - AI-driven functional annotation
+   - Input: `*.tsv` files from FANTASIA output directory
+   - Functional terms: Predicted protein functions
+   - Extra information: Confidence scores, similar proteins
+
 **Note**: OrthoFinder outputs are excluded as per requirements.
 
 #### Installation
@@ -86,6 +91,9 @@ python create_excel_outputs.py --interproscan-only
 
 # EggNOG-mapper only
 python create_excel_outputs.py --eggnog-only
+
+# FANTASIA only
+python create_excel_outputs.py --fantasia-only
 ```
 
 #### Command-Line Options
@@ -106,6 +114,7 @@ optional arguments:
   --kofamscan-only      Process only KofamScan results
   --interproscan-only   Process only InterProScan results
   --eggnog-only         Process only EggNOG-mapper results
+  --fantasia-only       Process only FANTASIA results
 ```
 
 #### Output Files
@@ -116,6 +125,7 @@ The script generates one Excel file per input sample and tool:
 - `{sample}_interproscan_annotations.xlsx` - InterProScan results
 - `{sample}_eggnog_v5_annotations.xlsx` - EggNOG v5 results
 - `{sample}_eggnog_v7_annotations.xlsx` - EggNOG v7 results
+- `{sample}_fantasia_annotations.xlsx` - FANTASIA results
 
 Each Excel file includes:
 - Formatted headers (blue background, white text)
@@ -129,10 +139,11 @@ Each Excel file includes:
 | gene001.t1 | K00001 | Score: 150.2, E-value: 1.2e-45, Threshold: 100.00 |
 | gene001.t1 | GO:0005515 | Domain: Zinc finger (PF00001); InterPro: Zinc finger domain (IPR000001) |
 | gene002.t1 | K00002 | Description: Protein kinase; Best hit: 12345.XP_001; E-value: 1e-100 |
+| gene003.t1 | Protein kinase, ATP-binding | Confidence: 0.95; Similar: sp|P12345|PKA_HUMAN |
 
 #### Integration with Pipeline
 
-This script is designed to be run after Steps 02-04 of the annotation pipeline:
+This script is designed to be run after Steps 02-06 of the annotation pipeline:
 
 ```bash
 # Run annotation steps
@@ -140,6 +151,7 @@ sbatch 02_run_kofamscan.sh
 sbatch 03_run_interproscan.sh
 sbatch 04_1_run_eggnog_V5.sh
 sbatch 04_2_run_eggnog7_annotator.sh
+sbatch 06_run_fantasia.slurm
 
 # Wait for jobs to complete, then generate Excel outputs
 cd scripts/INTEGRATION
@@ -165,6 +177,5 @@ python create_excel_outputs.py
 Potential improvements for this script:
 - [ ] Merge multiple tools' annotations for the same gene into a single Excel file
 - [ ] Add summary statistics sheet (e.g., annotation coverage per tool)
-- [ ] Support for FANTASIA output integration
 - [ ] Filter by confidence scores or E-values
 - [ ] Generate combined annotation report with all tools
