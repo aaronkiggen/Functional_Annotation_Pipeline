@@ -111,8 +111,7 @@ export EGGNOG_DATA_DIR="${EGGNOG_DB_V5}"
 echo "  - Database location: ${EGGNOG_DATA_DIR}"
 echo "  - Running download_eggnog_data.py (this may take a while)..."
 echo ""
-cd "${PROJECT_ROOT}/installation"
-if ! conda run -n eggnog_2025 python3 download_eggnog_data.py -y; then
+if ! conda run -n eggnog_2025 python3 "${PROJECT_ROOT}/installation/download_eggnog_data.py" -y; then
     echo "✗ Error: Failed to download EggNOG database"
     exit 1
 fi
