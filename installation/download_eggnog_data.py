@@ -1,4 +1,36 @@
 #!/usr/bin/env python3
+################################################################################
+# Functional Annotation Pipeline - EggNOG Database Downloader
+# 
+# Author: Aaron Kiggen (adapted from eggnog-mapper download script)
+# Repository: aaronkiggen/Functional_Annotation_Pipeline
+#
+# Description: Downloads EggNOG-mapper v5 databases including:
+#              - Main annotation database (eggnog.db)
+#              - Taxa database (eggnog.taxa.db)
+#              - Diamond search database (eggnog_proteins.dmnd)
+#              - Optional: MMseqs2, PFAM, HMMER, and novel families databases
+#
+# Usage: python3 download_eggnog_data.py [OPTIONS]
+#
+# Common usage examples:
+#   python3 download_eggnog_data.py -y                    # Download all default databases
+#   python3 download_eggnog_data.py -y -M                 # Include MMseqs2 database
+#   python3 download_eggnog_data.py -y -P                 # Include PFAM database
+#   python3 download_eggnog_data.py -y -H -d 2            # Include HMMER database for Bacteria
+#
+# Options:
+#   -y              : Assume "yes" to all questions (non-interactive mode)
+#   -D              : Skip Diamond database download
+#   -M              : Download MMseqs2 database
+#   -P              : Download PFAM database
+#   -H -d TAXID     : Download HMMER database for specific taxonomic level
+#   -F              : Download novel families databases
+#   --data_dir DIR  : Specify custom data directory
+#
+# Note: Set EGGNOG_DATA_DIR environment variable to specify the database location
+#       before running this script (see 'environments_and_databases' script)
+################################################################################
 
 import os, sys
 import argparse

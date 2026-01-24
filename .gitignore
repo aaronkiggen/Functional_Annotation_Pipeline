@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+
+# Conda environments
+.conda/
+env/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.~*
+
+# Data files (user should configure paths in config.env)
+input_proteomes/
+primary_transcripts/
+results/
+logs/
+databases/
+
+# SLURM output
+slurm-*.out
