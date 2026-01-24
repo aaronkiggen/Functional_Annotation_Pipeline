@@ -1,75 +1,212 @@
-BASE="${HOME}/databases"
+#!/bin/bash
+################################################################################
+# Functional Annotation Pipeline - Environments and Databases Setup
+# 
+# Author: Aaron Kiggen
+# Repository: aaronkiggen/Functional_Annotation_Pipeline
+#
+# Description: Sets up Conda environments and downloads required databases
+#              for KofamScan, EggNOG-mapper (v5 & v7), and OrthoFinder
+#
+# Usage: Run this script on the login node of your HPC cluster
+#        bash environments_and_databases
+#
+# Note: This script uses paths defined in config.env. Make sure config.env
+#       is properly configured before running this script.
+################################################################################
 
-mkdir -p "${BASE}"
+# Source configuration file to use consistent paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+CONFIG_FILE="${PROJECT_ROOT}/config.env"
 
+if [ -f "${CONFIG_FILE}" ]; then
+    echo "✓ Sourcing configuration from ${CONFIG_FILE}"
+    source "${CONFIG_FILE}"
+else
+    echo "⚠ Warning: config.env not found. Using default paths."
+    DB_ROOT="${HOME}/databases"
+fi
 
+echo ""
+echo "============================================================"
+echo " Setting Up Conda Environments and Databases"
+echo "============================================================"
+echo ""
+echo "Installation directories:"
+echo "  - Databases: ${DB_ROOT}"
+echo ""
 
+# Create base database directory
+mkdir -p "${DB_ROOT}"
 
+################################################################################
+# 1. KofamScan Environment and Database
+################################################################################
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 1: Setting up KofamScan"
+echo "------------------------------------------------------------"
+echo ""
+echo "Creating Conda environment 'kofam' with Python 3.9..."
+if ! conda create -n kofam python=3.9 -y; then
+    echo "✗ Error: Failed to create kofam environment"
+    exit 1
+fi
 
-# 1. KofamScan environment
-conda create -n kofam python=3.9
-conda install -c bioconda kofamscan hmmer
+echo ""
+echo "Installing KofamScan and HMMER..."
+if ! conda install -n kofam -c bioconda kofamscan hmmer -y; then
+    echo "✗ Error: Failed to install KofamScan and HMMER"
+    exit 1
+fi
 
-DB=${BASE}/kofamscan
+echo ""
+echo "Downloading KofamScan database to ${KOFAM_DB:-${DB_ROOT}/kofamscan}..."
+KOFAM_DB_DIR="${KOFAM_DB:-${DB_ROOT}/kofamscan}"
+mkdir -p "${KOFAM_DB_DIR}"
+cd "${KOFAM_DB_DIR}"
 
-
-mkdir -p "${DB}"
-cd "${DB}"
-
-# Download KOfam database
+echo "  - Downloading profiles archive..."
 wget ftp://ftp.genome.jp/pub/db/kofam/profiles.tar.gz
+
+echo "  - Downloading KO list..."
 wget ftp://ftp.genome.jp/pub/db/kofam/ko_list.gz
 
-# Decompress
+echo "  - Extracting profiles..."
 tar -xzf profiles.tar.gz
+
+echo "  - Extracting KO list..."
 gunzip ko_list.gz
 
+echo "✓ KofamScan setup complete!"
 
-# 2. EggNOG-mapper db5 environment
-conda create -n eggnog_2025 python=3.10
-conda install -c bioconda -c conda-forge eggnog-mapper
+################################################################################
+# 2. EggNOG-mapper v5 Environment and Database
+################################################################################
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 2: Setting up EggNOG-mapper v5"
+echo "------------------------------------------------------------"
+echo ""
+echo "Creating Conda environment 'eggnog_2025' with Python 3.10..."
+if ! conda create -n eggnog_2025 python=3.10 -y; then
+    echo "✗ Error: Failed to create eggnog_2025 environment"
+    exit 1
+fi
 
+echo ""
+echo "Installing EggNOG-mapper..."
+if ! conda install -n eggnog_2025 -c bioconda -c conda-forge eggnog-mapper -y; then
+    echo "✗ Error: Failed to install EggNOG-mapper"
+    exit 1
+fi
 
-cd Functional_Annotation_Pipeline/installation
-EGGNOG_DB_V5=${BASE}/eggnog
-
+echo ""
+echo "Downloading EggNOG v5 database to ${DB_ROOT}/eggnog..."
+EGGNOG_DB_V5="${DB_ROOT}/eggnog"
 mkdir -p "${EGGNOG_DB_V5}"
 
-export EGGNOG_DATA_DIR=${EGGNOG_DB_V5}
-download_eggnog_data.py 
+export EGGNOG_DATA_DIR="${EGGNOG_DB_V5}"
+echo "  - Database location: ${EGGNOG_DATA_DIR}"
+echo "  - Running download_eggnog_data.py (this may take a while)..."
+echo ""
+if ! conda run -n eggnog_2025 python3 "${PROJECT_ROOT}/installation/download_eggnog_data.py" -y; then
+    echo "✗ Error: Failed to download EggNOG database"
+    exit 1
+fi
 
+echo "✓ EggNOG-mapper v5 setup complete!"
 
-
-
-# 3. EggNOG-mapper db7 
-EGGNOG_DB_V7=${BASE}/eggnog7
-
+################################################################################
+# 3. EggNOG v7 Database
+################################################################################
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 3: Downloading EggNOG v7 Database"
+echo "------------------------------------------------------------"
+echo ""
+echo "Setting up EggNOG v7 database at ${DB_ROOT}/eggnog7..."
+EGGNOG_DB_V7="${DB_ROOT}/eggnog7"
 mkdir -p "${EGGNOG_DB_V7}"
-
 cd "${EGGNOG_DB_V7}"
 
-# The master search table
+echo ""
+echo "Downloading master search table..."
+echo "  - File: eggnog7_20251223_master_search_table.tsv.gz"
 wget https://a3s.fi/eggnog7_annotator/eggnog7_20251223_master_search_table.tsv.gz
 wget https://a3s.fi/eggnog7_annotator/eggnog7_20251223_master_search_table.tsv.gz.md5
+echo "  - Verifying checksum..."
 md5sum -c eggnog7_20251223_master_search_table.tsv.gz.md5
 
-# The protein search diamond database
+echo ""
+echo "Downloading protein search diamond database..."
+echo "  - File: eggnog7_20251223_proteins.dmnd (this is a large file)"
 wget https://a3s.fi/eggnog7_annotator/eggnog7_20251223_proteins.dmnd
 wget https://a3s.fi/eggnog7_annotator/eggnog7_20251223_proteins.dmnd.md5
+echo "  - Verifying checksum..."
 md5sum -c eggnog7_20251223_proteins.dmnd.md5
 
-# Optional: test data
+echo ""
+echo "Downloading test data (optional)..."
+echo "  - File: test.fa"
 wget https://a3s.fi/eggnog7_annotator/test.fa
 wget https://a3s.fi/eggnog7_annotator/test.fa.md5
+echo "  - Verifying checksum..."
 md5sum -c test.fa.md5
 
+echo "✓ EggNOG v7 database download complete!"
 
+################################################################################
+# 4. OrthoFinder Environment
+################################################################################
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 4: Setting up OrthoFinder"
+echo "------------------------------------------------------------"
+echo ""
+echo "Creating Conda environment 'of3' with Python 3.9..."
+if ! conda create -n of3 python=3.9 -y; then
+    echo "✗ Error: Failed to create of3 environment"
+    exit 1
+fi
 
+echo ""
+echo "Installing OrthoFinder, Diamond, and MCL..."
+if ! conda install -n of3 -c bioconda orthofinder diamond mcl -y; then
+    echo "✗ Error: Failed to install OrthoFinder, Diamond, and MCL"
+    exit 1
+fi
 
+echo "✓ OrthoFinder setup complete!"
 
-
-
-# 3. OrthoFinder environment
-conda create -n of3 python=3.9
-conda install -c bioconda orthofinder diamond mcl
+################################################################################
+# Installation Complete
+################################################################################
+echo ""
+echo "============================================================"
+echo " Installation Complete!"
+echo "============================================================"
+echo ""
+echo "Summary of installed environments:"
+echo "  1. kofam         - KofamScan for KEGG annotation"
+echo "  2. eggnog_2025   - EggNOG-mapper v5 for functional annotation"
+echo "  3. of3           - OrthoFinder for comparative genomics"
+echo ""
+echo "Database locations:"
+echo "  - KofamScan:     ${KOFAM_DB_DIR}"
+echo "  - EggNOG v5:     ${EGGNOG_DB_V5}"
+echo "  - EggNOG v7:     ${EGGNOG_DB_V7}"
+echo ""
+echo "Next steps:"
+echo "  - Run './installation/interproscan' to install InterProScan"
+echo "  - Run './installation/eggnog7_annotator' to install EggNOG7 annotator"
+echo "  - Run './installation/FANTASIA' for FANTASIA setup instructions"
+echo ""
+echo "Verify installations with:"
+echo "  conda activate kofam && exec_annotation --help"
+echo "  conda activate eggnog_2025 && emapper.py --version"
+echo "  conda activate of3 && orthofinder --help"
+echo ""
+################################################################################
 

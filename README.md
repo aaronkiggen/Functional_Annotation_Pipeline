@@ -151,9 +151,9 @@ After running the complete pipeline, you will have:
 ## 🔮 Future Work
 
 - [ ] **Downstream Analysis**: R scripts for parsing and visualizing annotation density
-- [ ] **Integration**: Merging GFF3 files from all tools into a consensus annotation
-- [ ] **Automated Testing**: CI/CD pipeline for validation
-- [ ] **Containerization**: Docker/Singularity images for easier deployment
+- [ ] **Consensus annotation**: Integration of functional annotation tools through weighted evidence which can be tweaked by the user
+- [ ] **GFF3 generation**: from concensus annotation create a GFF3 file
+- [ ] **TopGO output**: from concensus GO terms create a TopGO suitable output file for downstream analyses
 
 
 ## 📝 Citation

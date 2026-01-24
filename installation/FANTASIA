@@ -1,32 +1,165 @@
-BASE=/lustre1/scratch/354/vsc35429
-cd "${BASE}"
+#!/bin/bash
+################################################################################
+# Functional Annotation Pipeline - FANTASIA Setup Instructions
+# 
+# Author: Aaron Kiggen
+# Repository: aaronkiggen/Functional_Annotation_Pipeline
+#
+# Description: Instructions for setting up FANTASIA (AI-driven annotation)
+#
+# Usage: Read these instructions and follow the steps manually
+#        This is not an automated installation script
+#
+# Note: FANTASIA requires GPU resources and is more complex to set up
+#       These instructions assume you're on the login node of an HPC cluster
+################################################################################
 
-DB=${BASE}/
+# Source configuration file to use consistent paths
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+CONFIG_FILE="${PROJECT_ROOT}/config.env"
 
+if [ -f "${CONFIG_FILE}" ]; then
+    echo "✓ Sourcing configuration from ${CONFIG_FILE}"
+    source "${CONFIG_FILE}"
+fi
 
-git clone https://github.com/CBBIO/FANTASIA.git
-cd FANTASIA
+# Set installation directory
+if [ -n "${VSC_SCRATCH}" ]; then
+    INSTALL_DIR="${VSC_SCRATCH}"
+else
+    INSTALL_DIR="${HOME}/scratch"
+    echo "⚠ Warning: VSC_SCRATCH not set. Using default: ${INSTALL_DIR}"
+fi
 
-#Choose the appropriate script based on your computing environment (e.g., CESGA or Greisenwald) and the desired workload (single job or job array). Each script launches PostgreSQL, RabbitMQ, and the FANTASIA pipeline inside containers using either Apptainer or Singularity, depending on the cluster. 
-#You can use these scripts as a template to adapt the workflow to your own HPC environment.
+echo ""
+echo "============================================================"
+echo " FANTASIA Setup Instructions"
+echo "============================================================"
+echo ""
+echo "FANTASIA is an AI-driven functional annotation tool that requires:"
+echo "  - GPU resources (NVIDIA A100/H100 recommended)"
+echo "  - Apptainer/Singularity for containerization"
+echo "  - PostgreSQL with pgvector extension"
+echo "  - RabbitMQ message broker"
+echo ""
+echo "Installation directory: ${INSTALL_DIR}"
+echo ""
 
-#We use fantasia.slurm which is the CESGA (SLURM GPU partition) adapted to work on the Vlaams Supercomputer Centrum (VSC) but should also work on similar infrastructures.
-#Apptainer is required to run this script
-#see https://fantasia.readthedocs.io/en/latest/deployment/cesga_job.html to understand how the script works
+echo "------------------------------------------------------------"
+echo " Step 1: Clone FANTASIA Repository"
+echo "------------------------------------------------------------"
+echo ""
+echo "Run the following commands to clone FANTASIA:"
+echo ""
+echo "  cd ${INSTALL_DIR}"
+echo "  git clone https://github.com/CBBIO/FANTASIA.git"
+echo "  cd FANTASIA"
+echo ""
+echo "Press Enter to continue..."
+read -r
 
-#FANTASIA is primarily configured via a YAML file located at:
-config/config.yaml
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 2: Choose Your SLURM Script"
+echo "------------------------------------------------------------"
+echo ""
+echo "FANTASIA provides several pre-configured SLURM scripts:"
+echo ""
+echo "  • fantasia.slurm      - CESGA SLURM GPU partition (recommended for VSC)"
+echo "  • other scripts       - See FANTASIA/slurm_scripts/ for alternatives"
+echo ""
+echo "The fantasia.slurm script has been tested on the Vlaams Supercomputer"
+echo "Centrum (VSC) and should work on similar HPC infrastructures."
+echo ""
+echo "Key requirements:"
+echo "  ✓ Apptainer must be available on your cluster"
+echo "  ✓ Access to GPU partition (--partition gpu)"
+echo "  ✓ NVIDIA GPU with CUDA support"
+echo ""
+echo "For detailed information about how the script works, see:"
+echo "  https://fantasia.readthedocs.io/en/latest/deployment/cesga_job.html"
+echo ""
+echo "Press Enter to continue..."
+read -r
 
-#This file allows you to specify key execution parameters, including:
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 3: Configure FANTASIA"
+echo "------------------------------------------------------------"
+echo ""
+echo "FANTASIA is configured via a YAML file:"
+echo "  Location: ${INSTALL_DIR}/FANTASIA/config/config.yaml"
+echo ""
+echo "Key parameters you MUST configure:"
+echo ""
+echo "1. Input FASTA path:"
+echo "   input: /path/to/your/protein.faa"
+echo "   Example: ${PRIMARY_TRANSCRIPTS_DIR:-/project/inputs}/species_protein.faa"
+echo ""
+echo "2. Output prefix:"
+echo "   prefix: Your_Species_Name"
+echo "   Example: prefix: Daphnia_magna_LRVO1"
+echo ""
+echo "These are the ONLY settings you should change for default operation."
+echo "The FANTASIA documentation recommends using default settings:"
+echo "  https://fantasia.readthedocs.io/en/latest/method/experiments_setup.html"
+echo ""
+echo "Press Enter to continue..."
+read -r
 
-#Input FASTA path
-#input: /project/inputs/GCA_030254905.1_UOB_LRV0_1_protein.faa  # change it to where your protein.faa file is
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 4: Update config.env"
+echo "------------------------------------------------------------"
+echo ""
+echo "After setting up FANTASIA, update your config.env with:"
+echo ""
+echo "  FANTASIA_CONTAINER=\"${INSTALL_DIR}/FANTASIA/containers/fantasia.sif\""
+echo "  FANTASIA_CONFIG=\"${INSTALL_DIR}/FANTASIA/config/config.yaml\""
+echo ""
+echo "The pipeline's config.env already includes settings for:"
+echo "  - Output directory: ${FANTASIA_OUTPUT:-\${RESULTS_DIR}/fantasia}"
+echo "  - Model paths and database settings"
+echo "  - GPU optimization parameters"
+echo ""
+echo "Press Enter to continue..."
+read -r
 
-#Output prefix
-#prefix: Daphnia_magna_LRVO1 # str | change it to your organism of choice
+echo ""
+echo "------------------------------------------------------------"
+echo " Step 5: Running FANTASIA"
+echo "------------------------------------------------------------"
+echo ""
+echo "Once configured, submit the FANTASIA job using:"
+echo ""
+echo "  cd ${INSTALL_DIR}/FANTASIA"
+echo "  sbatch fantasia.slurm"
+echo ""
+echo "Monitor the job with:"
+echo "  squeue -u \$USER"
+echo "  tail -f slurm-<jobid>.out"
+echo ""
 
-#These are the only setting one should change to run FANTASIA in default settings which is recommended (https://fantasia.readthedocs.io/en/latest/method/experiments_setup.html) 
-
-
-
-
+echo ""
+echo "============================================================"
+echo " Additional Resources"
+echo "============================================================"
+echo ""
+echo "FANTASIA Documentation:"
+echo "  https://fantasia.readthedocs.io/"
+echo ""
+echo "Key documentation pages:"
+echo "  • Installation: https://fantasia.readthedocs.io/en/latest/installation/"
+echo "  • Configuration: https://fantasia.readthedocs.io/en/latest/configuration/"
+echo "  • HPC Deployment: https://fantasia.readthedocs.io/en/latest/deployment/"
+echo ""
+echo "For troubleshooting and support:"
+echo "  • GitHub Issues: https://github.com/CBBIO/FANTASIA/issues"
+echo "  • Pipeline Issues: https://github.com/aaronkiggen/Functional_Annotation_Pipeline/issues"
+echo ""
+echo "============================================================"
+echo " Setup Instructions Complete"
+echo "============================================================"
+echo ""
+################################################################################
