@@ -143,7 +143,7 @@ Each Excel file includes:
 
 #### Integration with Pipeline
 
-This script is designed to be run after Steps 02-06 of the annotation pipeline:
+This script is designed to be run after annotation steps (Steps 02-06) of the pipeline:
 
 ```bash
 # Run annotation steps
@@ -151,6 +151,7 @@ sbatch 02_run_kofamscan.sh
 sbatch 03_run_interproscan.sh
 sbatch 04_1_run_eggnog_V5.sh
 sbatch 04_2_run_eggnog7_annotator.sh
+sbatch 05_run_orthofinder.sh  # Optional - not included in Excel outputs
 sbatch 06_run_fantasia.slurm
 
 # Wait for jobs to complete, then generate Excel outputs

@@ -401,11 +401,18 @@ class FantasiaParser(AnnotationParser):
                 # First non-comment line is header
                 if header_line is None:
                     header_line = line.strip().split('\t')
+                    # Validate required columns exist
+                    required_cols = ['protein_id', 'predicted_function']
+                    if not all(col in header_line for col in required_cols):
+                        print(f"Warning: Missing required columns in {self.input_file}")
+                        print(f"Expected columns: {required_cols}, Found: {header_line}")
+                        return
                     continue
                 
                 parts = line.strip().split('\t')
                 
-                if len(parts) < len(header_line):
+                # Skip lines that don't match header length
+                if len(parts) != len(header_line):
                     continue
                 
                 # Create dictionary from header and values
