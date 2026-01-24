@@ -3,9 +3,6 @@ BASE="${HOME}/tools"
 mkdir -p "${BASE}"
 cd "${BASE}"
 
-# Change to the git repos
-cd "${BASE}"
-
 # clone it to the folder
 git clone https://github.com/fischuu/eggnog7_annotator.git
 
