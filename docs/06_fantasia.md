@@ -48,8 +48,8 @@ apptainer run docker://rabbitmq:3.11-management
 Edit `fantasia/config.yaml`:
 ```yaml
 models:
-  embedding_model: "/path/to/prot_bert.bin"
-  llm_model: "/path/to/biogpt.bin"
+  embedding_model: "models/prot_bert.bin"
+  llm_model: "models/biogpt.bin"
 
 database:
   host: "localhost"

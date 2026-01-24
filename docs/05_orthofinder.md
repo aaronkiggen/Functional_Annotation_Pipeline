@@ -36,7 +36,7 @@ orthofinder -f input_proteomes/ -t 32 -a 16
 ### Advanced Options
 ```bash
 orthofinder -f input_proteomes/ -t 32 -a 16 \
-  -S diamond \      # Fast search (vs blast)
+  -S diamond \      # Fast search (vs. blast)
   -M msa \          # Multiple sequence alignment
   -o output_dir \
   -n run_name
