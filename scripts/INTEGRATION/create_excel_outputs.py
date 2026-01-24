@@ -31,6 +31,10 @@ except ImportError:
 class AnnotationParser:
     """Base class for parsing annotation files"""
     
+    # Constants
+    KEGG_PREFIX = 'ko:'
+    KEGG_PREFIX_LEN = len(KEGG_PREFIX)
+    
     def __init__(self, input_file: str):
         self.input_file = input_file
         self.results = []
@@ -265,8 +269,8 @@ class EggNOGParser(AnnotationParser):
                     for ko in ko_list:
                         ko = ko.strip()
                         # Remove 'ko:' prefix if present
-                        if ko.startswith('ko:'):
-                            ko = ko[3:]
+                        if ko.startswith(self.KEGG_PREFIX):
+                            ko = ko[self.KEGG_PREFIX_LEN:]
                         if ko:
                             extra_parts = []
                             if description and description != '-':
@@ -355,8 +359,8 @@ class EggNOG7Parser(AnnotationParser):
                     for ko in ko_list:
                         ko = ko.strip()
                         # Remove 'ko:' prefix if present
-                        if ko.startswith('ko:'):
-                            ko = ko[3:]
+                        if ko.startswith(self.KEGG_PREFIX):
+                            ko = ko[self.KEGG_PREFIX_LEN:]
                         if ko:
                             extra_parts = []
                             if protein_name and protein_name != '-':
