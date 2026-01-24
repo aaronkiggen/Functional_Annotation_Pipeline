@@ -2,11 +2,11 @@
 #SBATCH --job-name=02_kofamscan
 #SBATCH --output=logs/02_kofam_%j.out
 #SBATCH --error=logs/02_kofam_%j.err
-#SBATCH --time=12:00:00
+#SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=32GB
-#SBATCH --partition=cpu
+#SBATCH --mem=64G
+#SBATCH --time=06:00:00
 
 ################################################################################
 # Step 02: KofamScan - KEGG Orthology Annotation
