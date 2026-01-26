@@ -452,8 +452,10 @@ class EggNOG7Parser(AnnotationParser):
     
     def parse(self):
         """
-        Parse EggNOG 7 .eggnog.tsv.gz format:
-        Desired output: gene / Description / GOs / KEGG_ko / KEGG_Pathway / KEGG_Reaction / KEGG_rclass / PFAM
+        Parse EggNOG 7 .eggnog.tsv.gz format with scores:
+        Expected format: Column 0 = gene_name, Column 1 = eggnog_protein_ID,
+                        Column 12 = KEGG with scores, Column 14 = GO with scores
+        Desired output: gene / eggnog_protein_ID / GOs (with scores) / KEGGs (with scores)
         """
         self.results = []
         
@@ -474,42 +476,53 @@ class EggNOG7Parser(AnnotationParser):
                 
                 parts = line.strip().split('\t')
                 
-                if not header_line or len(parts) != len(header_line):
+                if not parts or len(parts) < 2:
                     continue
                 
-                # Create dictionary from header and values
-                row_dict = dict(zip(header_line, parts))
+                # Use positional columns if we have enough columns
+                # Expected: col 0 = gene, col 1 = eggnog_protein_ID
+                # col 12 = KEGG with scores, col 14 = GO with scores
+                if len(parts) >= 15:
+                    gene_name = parts[0]
+                    eggnog_protein_id = parts[1]
+                    kegg_with_scores = parts[12] if len(parts) > 12 else ''
+                    go_with_scores = parts[14] if len(parts) > 14 else ''
+                elif header_line and len(parts) == len(header_line):
+                    # Fallback to header-based parsing for compatibility
+                    row_dict = dict(zip(header_line, parts))
+                    gene_name = row_dict.get('query', '')
+                    eggnog_protein_id = row_dict.get('seed_ortholog', '')
+                    kegg_with_scores = row_dict.get('KEGG_ko', '') or row_dict.get('KEGG_KO', '')
+                    go_with_scores = row_dict.get('GOs', '') or row_dict.get('GO', '')
+                else:
+                    # Not enough columns or no header
+                    continue
                 
-                gene_name = row_dict.get('query', '')
-                description = row_dict.get('description', '') or row_dict.get('Description', '')
-                go_terms = row_dict.get('GOs', '') or row_dict.get('GO', '')
-                kegg_ko = row_dict.get('KEGG_KO', '') or row_dict.get('KEGG_ko', '')
-                kegg_pathway = row_dict.get('KEGG_Pathway', '') or row_dict.get('KEGG_pathway', '')
-                kegg_reaction = row_dict.get('KEGG_Reaction', '') or row_dict.get('KEGG_reaction', '')
-                kegg_rclass = row_dict.get('KEGG_rclass', '')
-                pfam = row_dict.get('PFAMs', '') or row_dict.get('PFAM', '')
+                # Clean up empty values (-, empty strings)
+                if eggnog_protein_id == '-':
+                    eggnog_protein_id = ''
+                if kegg_with_scores == '-':
+                    kegg_with_scores = ''
+                if go_with_scores == '-':
+                    go_with_scores = ''
                 
-                # Store one row per gene
+                # Store one row per gene with scores included
                 self.results.append({
                     'gene': gene_name,
-                    'Description': description if description != '-' else '',
-                    'GOs': go_terms if go_terms != '-' else '',
-                    'KEGG_ko': kegg_ko if kegg_ko != '-' else '',
-                    'KEGG_Pathway': kegg_pathway if kegg_pathway != '-' else '',
-                    'KEGG_Reaction': kegg_reaction if kegg_reaction != '-' else '',
-                    'KEGG_rclass': kegg_rclass if kegg_rclass != '-' else '',
-                    'PFAM': pfam if pfam != '-' else ''
+                    'eggnog_protein_ID': eggnog_protein_id,
+                    'GOs': go_with_scores,
+                    'KEGGs': kegg_with_scores
                 })
     
+    
     def to_dataframe(self) -> pd.DataFrame:
-        """Convert results to pandas DataFrame with EggNOG-specific columns"""
+        """Convert results to pandas DataFrame with EggNOG v7 columns"""
         if not self.results:
-            return pd.DataFrame(columns=['gene', 'Description', 'GOs', 'KEGG_ko', 
-                                        'KEGG_Pathway', 'KEGG_Reaction', 'KEGG_rclass', 'PFAM'])
+            return pd.DataFrame(columns=['gene', 'eggnog_protein_ID', 'GOs', 'KEGGs'])
         return pd.DataFrame(self.results)
     
     def save_to_excel(self, output_file: str):
-        """Save results to Excel file with EggNOG-specific formatting"""
+        """Save results to Excel file with EggNOG v7 formatting"""
         df = self.to_dataframe()
         
         if df.empty:
@@ -535,53 +548,76 @@ class EggNOG7Parser(AnnotationParser):
             
             # Adjust column widths
             worksheet.column_dimensions['A'].width = 25  # gene
-            worksheet.column_dimensions['B'].width = 50  # Description
-            worksheet.column_dimensions['C'].width = 60  # GOs
-            worksheet.column_dimensions['D'].width = 20  # KEGG_ko
-            worksheet.column_dimensions['E'].width = 30  # KEGG_Pathway
-            worksheet.column_dimensions['F'].width = 30  # KEGG_Reaction
-            worksheet.column_dimensions['G'].width = 30  # KEGG_rclass
-            worksheet.column_dimensions['H'].width = 40  # PFAM
+            worksheet.column_dimensions['B'].width = 30  # eggnog_protein_ID
+            worksheet.column_dimensions['C'].width = 80  # GOs
+            worksheet.column_dimensions['D'].width = 40  # KEGGs
         
         print(f"✓ Created: {output_file} ({len(df)} rows)")
     
     def create_per_term_output(self) -> pd.DataFrame:
-        """Create per-term output with 1 row per GO or KEGG term"""
+        """Create per-term output with 1 row per GO or KEGG term with scores"""
         if not self.results:
-            return pd.DataFrame(columns=['gene', 'term_type', 'term'])
+            return pd.DataFrame(columns=['gene', 'term_type', 'term', 'score'])
         
         rows = []
         for result in self.results:
             gene = result['gene']
             
-            # Process GO terms
+            # Process GO terms with scores (format: GO:0030154|2.33;GO:0048856|2.33)
             if result['GOs']:
-                go_list = result['GOs'].split(',')
-                for go_term in go_list:
-                    go_term = go_term.strip()
-                    if go_term:
+                go_items = result['GOs'].split(';')
+                for go_item in go_items:
+                    go_item = go_item.strip()
+                    if go_item and '|' in go_item:
+                        # Split term and score
+                        term, score = go_item.split('|', 1)
                         rows.append({
                             'gene': gene,
                             'term_type': 'GO',
-                            'term': go_term
+                            'term': term.strip(),
+                            'score': score.strip()
+                        })
+                    elif go_item:
+                        # Handle case without score
+                        rows.append({
+                            'gene': gene,
+                            'term_type': 'GO',
+                            'term': go_item,
+                            'score': ''
                         })
             
-            # Process KEGG terms
-            if result['KEGG_ko']:
-                kegg_list = result['KEGG_ko'].split(',')
-                for kegg_term in kegg_list:
-                    kegg_term = kegg_term.strip()
-                    # Remove 'ko:' prefix if present
-                    if kegg_term.startswith('ko:'):
-                        kegg_term = kegg_term[3:]
-                    if kegg_term:
+            # Process KEGG terms with scores (format: K25226|46.22;K00001|50.00)
+            if result['KEGGs']:
+                kegg_items = result['KEGGs'].split(';')
+                for kegg_item in kegg_items:
+                    kegg_item = kegg_item.strip()
+                    if kegg_item and '|' in kegg_item:
+                        # Split term and score
+                        term, score = kegg_item.split('|', 1)
+                        # Remove 'ko:' prefix if present
+                        term = term.strip()
+                        if term.startswith('ko:'):
+                            term = term[3:]
                         rows.append({
                             'gene': gene,
                             'term_type': 'KEGG',
-                            'term': kegg_term
+                            'term': term,
+                            'score': score.strip()
+                        })
+                    elif kegg_item:
+                        # Handle case without score
+                        kegg_item_clean = kegg_item.strip()
+                        if kegg_item_clean.startswith('ko:'):
+                            kegg_item_clean = kegg_item_clean[3:]
+                        rows.append({
+                            'gene': gene,
+                            'term_type': 'KEGG',
+                            'term': kegg_item_clean,
+                            'score': ''
                         })
         
         return pd.DataFrame(rows)
+
 
 
 class FantasiaParser(AnnotationParser):
@@ -951,6 +987,7 @@ def process_eggnog(results_dir: str, output_dir: str):
                         worksheet.column_dimensions['A'].width = 25  # gene
                         worksheet.column_dimensions['B'].width = 15  # term_type
                         worksheet.column_dimensions['C'].width = 30  # term
+                        worksheet.column_dimensions['D'].width = 15  # score
                     
                     print(f"✓ Created: {output_file_per_term} ({len(per_term_df)} rows)")
         else:
