@@ -29,13 +29,24 @@ A Python script that parses output files from functional annotation tools and ge
   - Columns: `gene`, `GO`, `Pathways`
   - One row per gene with GO terms and pathways grouped
 
-##### EggNOG-mapper
-- **Per-gene output** (`*_eggnog_v[5|7]_per_gene.xlsx`):
+##### EggNOG-mapper (v5)
+- **Per-gene output** (`*_eggnog_v5_per_gene.xlsx`):
   - Columns: `gene`, `Description`, `GOs`, `KEGG_ko`, `KEGG_Pathway`, `KEGG_Reaction`, `KEGG_rclass`, `PFAM`
   - One row per gene (already the desired format)
-- **Per-term output** (`*_eggnog_v[5|7]_per_term.xlsx`):
+- **Per-term output** (`*_eggnog_v5_per_term.xlsx`):
   - Columns: `gene`, `term_type`, `term`
   - One row per GO or KEGG term
+
+##### EggNOG-mapper (v7)
+- **Per-gene output** (`*_eggnog_v7_per_gene.xlsx`):
+  - Columns: `gene`, `eggnog_protein_ID`, `GOs`, `KEGGs`
+  - One row per gene with annotations and scores included in the GO/KEGG columns
+  - GO format: `GO:0030154|2.33;GO:0048856|2.33` (term|score separated by semicolons)
+  - KEGG format: `K25226|46.22;K00001|50.00` (term|score separated by semicolons)
+- **Per-term output** (`*_eggnog_v7_per_term.xlsx`):
+  - Columns: `gene`, `term_type`, `term`, `score`
+  - One row per GO or KEGG term with associated score
+  - Score reflects the weight, contribution, or confidence of that annotation
 
 ##### FANTASIA
 - **Per-term output** (`*_fantasia_{model}_per_term.xlsx`):
@@ -188,10 +199,22 @@ Each Excel file includes:
 |------|----------|-------|-------------------|---------------------|-----|----------|
 | P51587 | Pfam | 3.1E-52 | IPR002093 | BRCA2 repeat | GO:0005515\|GO:0006302 | REACT_71 |
 
-**EggNOG Per-Gene:**
+**EggNOG v5 Per-Gene:**
 | gene | Description | GOs | KEGG_ko | KEGG_Pathway | KEGG_Reaction | KEGG_rclass | PFAM |
 |------|-------------|-----|---------|--------------|---------------|-------------|------|
 | KAK4001897.1 | Belongs to the ubiquitin-conjugating enzyme family | GO:0000151,GO:0003674,... | ko:K00001,ko:K00002 | map00010,map00020 | R00001 | RC00001 | F-box-like,UQ_con |
+
+**EggNOG v7 Per-Gene:**
+| gene | eggnog_protein_ID | GOs | KEGGs |
+|------|-------------------|-----|-------|
+| KAK4001894.1 | 35525.A0A162NWZ1 | GO:0030154\|2.33;GO:0048856\|2.33;GO:0007059\|0.58 | K25226\|46.22 |
+
+**EggNOG v7 Per-Term:**
+| gene | term_type | term | score |
+|------|-----------|------|-------|
+| KAK4001894.1 | GO | GO:0030154 | 2.33 |
+| KAK4001894.1 | GO | GO:0048856 | 2.33 |
+| KAK4001894.1 | KEGG | K25226 | 46.22 |
 
 **FANTASIA Per-Term:**
 | gene | GO | term_count | final_score |
