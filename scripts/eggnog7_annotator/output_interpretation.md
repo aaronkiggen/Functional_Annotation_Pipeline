@@ -27,4 +27,4 @@ This document explains the columns in the EggNOG annotation output files.
 
 ## Score Interpretation
 
-> **Note:** The number after the `|` pipe symbol is not an E-value or p-value, but rather a **score** reflecting the weight, contribution, or confidence of that annotation for your protein.
+> **Note:** The number after the `|` pipe symbol is not an E-value or p-value, but rather a **score** reflecting the weight, contribution, or confidence of that annotation for your protein. Each term is assigned a confidence score that reflects how strongly and consistently that function is supported by phylogeny‑aware orthology evidence.
