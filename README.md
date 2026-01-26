@@ -82,14 +82,16 @@ sbatch 05_run_orthofinder.sh
 
 # 4. Deep Learning Annotation
 sbatch 06_run_fantasia.slurm
+
+# 5. Integration - Generate Excel outputs
+cd INTEGRATION
+python create_excel_outputs.py
+
+# 6. (Optional) Filter FANTASIA results
+python filter_fantasia_results.py \
+  --summary ../../results/fantasia/sample.tsv \
+  --excel-dir excel_outputs/
 ```
-
-### 5. Functional evidence integration and output generation
-
-```bash
-
-```
-
 
 ## 📖 Documentation
 
@@ -135,6 +137,21 @@ Advanced GPU-accelerated functional annotation using Large Language Models:
 - LLM model configuration
 - Integration with traditional annotations
 - **Runtime**: 4-15 hours (GPU-dependent)
+
+### Step 07: Integration & Output Generation
+**📂 [Integration Scripts](scripts/INTEGRATION/README.md)**
+
+Generate standardized Excel outputs and perform post-processing filtering:
+- **create_excel_outputs.py**: Convert all annotation results to formatted Excel files
+  - Creates per-term and per-gene outputs for each tool
+  - Standardized formatting with headers and column widths
+  - Supports KofamScan, InterProScan, EggNOG-mapper, and FANTASIA
+- **filter_fantasia_results.py**: Post-process FANTASIA results with threshold filtering
+  - Calculate 25th percentile (Q1) thresholds for each model
+  - Filter individual model Excel files (Task A)
+  - Create consensus results with majority vote ≥3/5 models (Task B)
+  - Optional protein-to-gene mapping from FASTA
+- **Runtime**: 5-15 minutes for typical datasets
 
 ## 📊 Expected Results
 
