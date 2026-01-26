@@ -458,7 +458,8 @@ class FantasiaParser(AnnotationParser):
                 self.results.append({
                     'gene_name': accession,
                     'functional_term': go_id,
-                    'extra_information': f"Score: {final_score}; Proteins: {proteins}" if final_score else f"Proteins: {proteins}"
+                    'extra_information': final_score,  # Store score directly
+                    'proteins': proteins  # Store proteins separately
                 })
     
     def to_dataframe(self) -> pd.DataFrame:
@@ -471,10 +472,43 @@ class FantasiaParser(AnnotationParser):
         df_fantasia = pd.DataFrame({
             'gene_name': df['gene_name'],
             'GO': df['functional_term'],
-            'final_score': df['extra_information'].apply(lambda x: x.split('Score: ')[1].split(';')[0] if 'Score: ' in x else ''),
-            'proteins': df['extra_information'].apply(lambda x: x.split('Proteins: ')[1] if 'Proteins: ' in x else '')
+            'final_score': df['extra_information'],  # Already the score
+            'proteins': df['proteins']  # Already the proteins
         })
         return df_fantasia
+    
+    def save_to_excel(self, output_file: str):
+        """Save results to Excel file with FANTASIA-specific formatting"""
+        df = self.to_dataframe()
+        
+        if df.empty:
+            print(f"Warning: No data to write for {output_file}")
+            return
+        
+        # Create Excel writer
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Annotations')
+            
+            # Get workbook and worksheet
+            workbook = writer.book
+            worksheet = writer.sheets['Annotations']
+            
+            # Format header
+            header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            header_font = Font(bold=True, color="FFFFFF")
+            
+            for cell in worksheet[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center')
+            
+            # Adjust column widths for FANTASIA format
+            worksheet.column_dimensions['A'].width = 25  # gene_name
+            worksheet.column_dimensions['B'].width = 20  # GO
+            worksheet.column_dimensions['C'].width = 15  # final_score
+            worksheet.column_dimensions['D'].width = 40  # proteins
+        
+        print(f"✓ Created: {output_file} ({len(df)} rows)")
 
 
 def find_files(directory: str, pattern: str) -> List[str]:
