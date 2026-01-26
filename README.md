@@ -183,5 +183,3 @@ MIT License - see [LICENSE](LICENSE) file for details
 - **Tool-specific issues**:  Consult the detailed documentation in `docs/`
 
 ---
-
-For detailed instructions on each pipeline component, see the documentation guides in the [`docs/`](docs/) directory.
