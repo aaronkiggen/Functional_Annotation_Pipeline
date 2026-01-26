@@ -168,6 +168,8 @@ if ! wget https://github.com/bbuchfink/diamond/releases/download/v2.1.16/diamond
     exit 1
 fi
 
+mkdir -p ${DB_ROOT}/eggnog7/diamond
+cd ${DB_ROOT}/eggnog7/diamond
 echo "  - Extracting Diamond..."
 if ! tar -xzf diamond-linux64.tar.gz; then
     echo "✗ Error: Failed to extract Diamond"
