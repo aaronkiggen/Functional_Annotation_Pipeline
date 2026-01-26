@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+
+############################################
+# REFERENCE
+############################################
+
+# TOOL ADAPTED FROM https://github.com/fischuu/eggnog7_annotator
+
 ############################################
 # Defaults
 ############################################
