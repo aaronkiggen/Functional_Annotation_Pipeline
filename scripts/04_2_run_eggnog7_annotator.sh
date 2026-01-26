@@ -16,9 +16,6 @@
 #   2. Merge hits with EggNOG master table
 ################################################################################
 
-set -e
-set -u
-set -o pipefail
 
 # Source configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
