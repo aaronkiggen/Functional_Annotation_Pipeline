@@ -52,7 +52,7 @@ EGGNOG7_SCRIPT="${SCRIPT_DIR}/eggnog7_annotator/eggnog7_annotator_AK.sh"
 # Check if annotation script exists
 if [ ! -f "${EGGNOG7_SCRIPT}" ]; then
     echo "ERROR: EggNOG 7 annotation script not found: ${EGGNOG7_SCRIPT}"
-    echo "Please ensure eggnog7_annotator.sh is in the correct location."
+    echo "Please ensure eggnog7_annotator_AK.sh is in the correct location."
     exit 1
 fi
 
