@@ -377,6 +377,140 @@ class EggNOG7Parser(AnnotationParser):
                             })
 
 
+class FantasiaParser(AnnotationParser):
+    """Parser for FANTASIA AI-driven annotation output files"""
+    
+    # Model names mapping for output file naming
+    MODEL_NAMES = {
+        'ESM_L0': 'ESM-2',
+        'Prot-T5_L0': 'ProtT5',
+        'Prost-T5_L0': 'ProstT5',
+        'Ankh3-Large_L0': 'Ankh3-Large',
+        'ESM3c_L0': 'ESM3c'
+    }
+    
+    def __init__(self, input_file: str, model_suffix: str = None):
+        """
+        Initialize parser with optional model suffix to filter specific model
+        
+        Args:
+            input_file: Path to FANTASIA output TSV file
+            model_suffix: If specified, only parse data for this model (e.g., 'ESM_L0')
+        """
+        super().__init__(input_file)
+        self.model_suffix = model_suffix
+    
+    def parse(self):
+        """
+        Parse FANTASIA TSV format:
+        Columns: accession, go_id, final_score_<model>, proteins
+        Creates results with gene_name, GO, final_score, proteins
+        """
+        self.results = []
+        
+        if not os.path.exists(self.input_file):
+            print(f"Warning: File not found: {self.input_file}")
+            return
+        
+        with open(self.input_file, 'r') as f:
+            header_line = None
+            for line in f:
+                # Skip comments
+                if line.startswith('#'):
+                    continue
+                
+                # First non-comment line is header
+                if header_line is None:
+                    header_line = line.strip().split('\t')
+                    # Validate required columns exist
+                    required_cols = ['accession', 'go_id', 'proteins']
+                    if not all(col in header_line for col in required_cols):
+                        print(f"Warning: Missing required columns in {self.input_file}")
+                        print(f"Expected: {required_cols}")
+                        return
+                    continue
+                
+                parts = line.strip().split('\t')
+                
+                # Skip lines that don't match header length
+                if len(parts) != len(header_line):
+                    continue
+                
+                # Create dictionary from header and values
+                row_dict = dict(zip(header_line, parts))
+                
+                accession = row_dict.get('accession', '')
+                go_id = row_dict.get('go_id', '')
+                proteins = row_dict.get('proteins', '')
+                
+                # Skip if no GO term
+                if not go_id or go_id == '-':
+                    continue
+                
+                # Get final_score for the specific model
+                score_col = f'final_score_{self.model_suffix}' if self.model_suffix else None
+                final_score = row_dict.get(score_col, '') if score_col else ''
+                
+                # Skip if this model has no score for this entry
+                if self.model_suffix and (not final_score or final_score.strip() == ''):
+                    continue
+                
+                self.results.append({
+                    'gene_name': accession,
+                    'functional_term': go_id,
+                    'extra_information': final_score,  # Store score directly
+                    'proteins': proteins  # Store proteins separately
+                })
+    
+    def to_dataframe(self) -> pd.DataFrame:
+        """Convert results to pandas DataFrame with FANTASIA-specific column names"""
+        if not self.results:
+            return pd.DataFrame(columns=['gene_name', 'GO', 'final_score', 'proteins'])
+        
+        df = pd.DataFrame(self.results)
+        # Rename columns to match FANTASIA expected format
+        df_fantasia = pd.DataFrame({
+            'gene_name': df['gene_name'],
+            'GO': df['functional_term'],
+            'final_score': df['extra_information'],  # Already the score
+            'proteins': df['proteins']  # Already the proteins
+        })
+        return df_fantasia
+    
+    def save_to_excel(self, output_file: str):
+        """Save results to Excel file with FANTASIA-specific formatting"""
+        df = self.to_dataframe()
+        
+        if df.empty:
+            print(f"Warning: No data to write for {output_file}")
+            return
+        
+        # Create Excel writer
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Annotations')
+            
+            # Get workbook and worksheet
+            workbook = writer.book
+            worksheet = writer.sheets['Annotations']
+            
+            # Format header
+            header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            header_font = Font(bold=True, color="FFFFFF")
+            
+            for cell in worksheet[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center')
+            
+            # Adjust column widths for FANTASIA format
+            worksheet.column_dimensions['A'].width = 25  # gene_name
+            worksheet.column_dimensions['B'].width = 20  # GO
+            worksheet.column_dimensions['C'].width = 15  # final_score
+            worksheet.column_dimensions['D'].width = 40  # proteins
+        
+        print(f"✓ Created: {output_file} ({len(df)} rows)")
+
+
 def find_files(directory: str, pattern: str) -> List[str]:
     """Find files matching a pattern in a directory"""
     path = Path(directory)
@@ -503,6 +637,47 @@ def process_eggnog(results_dir: str, output_dir: str):
         print("Warning: No EggNOG directories found")
 
 
+def process_fantasia(results_dir: str, output_dir: str):
+    """Process all FANTASIA output files and create one Excel per model"""
+    print("\n" + "="*60)
+    print("Processing FANTASIA Results")
+    print("="*60)
+    
+    fantasia_dir = os.path.join(results_dir, 'fantasia')
+    if not os.path.exists(fantasia_dir):
+        print(f"Warning: FANTASIA directory not found: {fantasia_dir}")
+        return
+    
+    # Find all TSV files (FANTASIA outputs)
+    tsv_files = find_files(fantasia_dir, '*.tsv')
+    
+    if not tsv_files:
+        print("No FANTASIA TSV files found")
+        return
+    
+    print(f"Found {len(tsv_files)} FANTASIA file(s)")
+    
+    # Define the models to process
+    models = ['ESM_L0', 'Prot-T5_L0', 'Prost-T5_L0', 'Ankh3-Large_L0', 'ESM3c_L0']
+    
+    for tsv_file in tsv_files:
+        basename = os.path.basename(tsv_file).replace('.tsv', '')
+        
+        # Process each model separately
+        for model_suffix in models:
+            model_name = FantasiaParser.MODEL_NAMES.get(model_suffix, model_suffix)
+            output_file = os.path.join(output_dir, f"{basename}_fantasia_{model_name}_annotations.xlsx")
+            
+            parser = FantasiaParser(tsv_file, model_suffix=model_suffix)
+            parser.parse()
+            
+            # Only save if there are results for this model
+            if parser.results:
+                parser.save_to_excel(output_file)
+            else:
+                print(f"  Skipping {model_name}: No annotations found")
+
+
 def main():
     """Main function"""
     parser = argparse.ArgumentParser(
@@ -520,6 +695,7 @@ Examples:
   %(prog)s --kofamscan-only
   %(prog)s --interproscan-only
   %(prog)s --eggnog-only
+  %(prog)s --fantasia-only
         """
     )
     
@@ -553,6 +729,12 @@ Examples:
         help='Process only EggNOG-mapper results'
     )
     
+    parser.add_argument(
+        '--fantasia-only',
+        action='store_true',
+        help='Process only FANTASIA results'
+    )
+    
     args = parser.parse_args()
     
     # Resolve paths
@@ -574,7 +756,7 @@ Examples:
         sys.exit(1)
     
     # Process tools based on flags
-    process_all = not any([args.kofamscan_only, args.interproscan_only, args.eggnog_only])
+    process_all = not any([args.kofamscan_only, args.interproscan_only, args.eggnog_only, args.fantasia_only])
     
     if process_all or args.kofamscan_only:
         process_kofamscan(results_dir, output_dir)
@@ -584,6 +766,9 @@ Examples:
     
     if process_all or args.eggnog_only:
         process_eggnog(results_dir, output_dir)
+    
+    if process_all or args.fantasia_only:
+        process_fantasia(results_dir, output_dir)
     
     print("\n" + "="*60)
     print("Excel Generation Complete")
