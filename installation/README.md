@@ -63,21 +63,7 @@ Install InterProScan for domain and motif analysis:
 
 **Time estimate:** 30-60 minutes
 
-### 3. EggNOG7 Annotator
-
-Install the EggNOG7 annotator tool:
-
-```bash
-./eggnog7_annotator
-```
-
-**What it does:**
-- Clones the eggnog7_annotator repository
-- Sets up PATH for the annotator script
-
-**Time estimate:** < 5 minutes
-
-### 4. FANTASIA (Optional)
+### 3. FANTASIA (Optional)
 
 FANTASIA is for AI-driven annotation using GPUs. This script provides instructions rather than automated installation:
 
@@ -142,7 +128,7 @@ source ~/.bashrc
 ### Permission errors
 Make sure scripts are executable (run from project root):
 ```bash
-chmod +x installation/environments_and_databases installation/interproscan installation/eggnog7_annotator installation/FANTASIA
+chmod +x installation/environments_and_databases installation/interproscan installation/FANTASIA
 ```
 
 ## Additional Resources
