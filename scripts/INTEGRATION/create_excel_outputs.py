@@ -489,8 +489,8 @@ class EggNOG7Parser(AnnotationParser):
                 if len(parts) >= 15:
                     gene_name = parts[0]
                     eggnog_protein_id = parts[1]
-                    kegg_with_scores = parts[12] if len(parts) > 12 else ''
-                    go_with_scores = parts[14] if len(parts) > 14 else ''
+                    kegg_with_scores = parts[12]
+                    go_with_scores = parts[14]
                 elif header_line and len(parts) == len(header_line):
                     # Fallback to header-based parsing for compatibility
                     row_dict = dict(zip(header_line, parts))
@@ -574,13 +574,23 @@ class EggNOG7Parser(AnnotationParser):
                     go_item = go_item.strip()
                     if go_item and '|' in go_item:
                         # Split term and score
-                        term, score = go_item.split('|', 1)
-                        rows.append({
-                            'gene': gene,
-                            'term_type': 'GO',
-                            'term': term.strip(),
-                            'score': score.strip()
-                        })
+                        parts = go_item.split('|', 1)
+                        if len(parts) == 2:
+                            term, score = parts
+                            rows.append({
+                                'gene': gene,
+                                'term_type': 'GO',
+                                'term': term.strip(),
+                                'score': score.strip()
+                            })
+                        else:
+                            # Malformed data - treat as term without score
+                            rows.append({
+                                'gene': gene,
+                                'term_type': 'GO',
+                                'term': go_item,
+                                'score': ''
+                            })
                     elif go_item:
                         # Handle case without score
                         rows.append({
@@ -597,17 +607,30 @@ class EggNOG7Parser(AnnotationParser):
                     kegg_item = kegg_item.strip()
                     if kegg_item and '|' in kegg_item:
                         # Split term and score
-                        term, score = kegg_item.split('|', 1)
-                        # Remove 'ko:' prefix if present
-                        term = term.strip()
-                        if term.startswith('ko:'):
-                            term = term[3:]
-                        rows.append({
-                            'gene': gene,
-                            'term_type': 'KEGG',
-                            'term': term,
-                            'score': score.strip()
-                        })
+                        parts = kegg_item.split('|', 1)
+                        if len(parts) == 2:
+                            term, score = parts
+                            # Remove 'ko:' prefix if present
+                            term = term.strip()
+                            if term.startswith('ko:'):
+                                term = term[3:]
+                            rows.append({
+                                'gene': gene,
+                                'term_type': 'KEGG',
+                                'term': term,
+                                'score': score.strip()
+                            })
+                        else:
+                            # Malformed data - treat as term without score
+                            kegg_item_clean = kegg_item.strip()
+                            if kegg_item_clean.startswith('ko:'):
+                                kegg_item_clean = kegg_item_clean[3:]
+                            rows.append({
+                                'gene': gene,
+                                'term_type': 'KEGG',
+                                'term': kegg_item_clean,
+                                'score': ''
+                            })
                     elif kegg_item:
                         # Handle case without score
                         kegg_item_clean = kegg_item.strip()
