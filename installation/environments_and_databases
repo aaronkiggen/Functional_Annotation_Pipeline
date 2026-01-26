@@ -155,14 +155,32 @@ wget https://a3s.fi/eggnog7_annotator/test.fa.md5
 echo "  - Verifying checksum..."
 md5sum -c test.fa.md5
 
-EGGNOG_DB_V7="${DB_ROOT}/eggnog7"
+echo ""
+echo "Installing Diamond for EggNOG v7..."
+echo "  - Diamond is required for protein sequence alignment with EggNOG v7"
+echo "  - Installing Diamond v2.1.16..."
+mkdir -p "${EGGNOG_DB_V7}/diamond"
+cd "${EGGNOG_DB_V7}/diamond" || exit 1
 
-mkdir -p {DB_ROOT}/eggnog7/diamond
-cd {DB_ROOT}/eggnog7/diamond
+echo "  - Downloading Diamond binary..."
+if ! wget https://github.com/bbuchfink/diamond/releases/download/v2.1.16/diamond-linux64.tar.gz; then
+    echo "✗ Error: Failed to download Diamond"
+    exit 1
+fi
 
-wget https://github.com/bbuchfink/diamond/releases/download/v2.1.16/diamond-linux64.tar.gz
-tar -xzf diamond-linux64.tar.gz
-./diamond version
+echo "  - Extracting Diamond..."
+if ! tar -xzf diamond-linux64.tar.gz; then
+    echo "✗ Error: Failed to extract Diamond"
+    exit 1
+fi
+
+echo "  - Verifying Diamond installation..."
+if ./diamond version; then
+    echo "✓ Diamond installation successful!"
+else
+    echo "✗ Error: Diamond verification failed"
+    exit 1
+fi
 
 echo "✓ EggNOG v7 database download complete!"
 
