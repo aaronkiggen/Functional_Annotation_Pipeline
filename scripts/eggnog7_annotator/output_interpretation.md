@@ -28,3 +28,124 @@ This document explains the columns in the EggNOG annotation output files.
 ## Score Interpretation
 
 > **Note:** The number after the `|` pipe symbol is not an E-value or p-value, but rather a **score** reflecting the weight, contribution, or confidence of that annotation for your protein. Each term is assigned a confidence score that reflects how strongly and consistently that function is supported by phylogeny‑aware orthology evidence.
+
+### 2. What the GO / KEGG score is actually based on
+
+The score is not a simple BLAST score or hit count.
+It is derived from four main components, all evaluated within phylogenetically consistent orthologous groups (OGs).
+
+#### 2.1 Fraction of orthologs carrying the term (consistency)
+
+For a given OG:
+
+- eggNOG checks how many member proteins are annotated with a given GO or KEGG term
+- The more consistently a term appears across orthologs, the higher the score
+
+Conceptually:
+
+```
+score ∝ (# orthologs with term) / (total orthologs in OG)
+```
+
+A term found in:
+
+- 95% of orthologs → high score
+- 10% of orthologs → low score
+
+This directly measures functional conservation. [[academic.oup.com](https://academic.oup.com)]
+
+#### 2.2 Phylogenetic depth of support (evolutionary breadth)
+
+Because v7 uses explicit gene trees, eggNOG can evaluate:
+
+- At what evolutionary depth the function appears
+- Whether it is conserved across:
+  - multiple phyla / kingdoms
+  - or only a recent lineage
+
+Functions supported across deep speciation nodes get higher confidence than lineage‑specific ones. [[academic.oup.com](https://academic.oup.com)], [[bork.embl.de](https://bork.embl.de)]
+
+This is a major upgrade over v5, which had no explicit tree‑based reasoning.
+
+#### 2.3 Penalization of paralog‑specific or clade‑restricted terms
+
+Using duplication/speciation inference, eggNOG v7 can detect:
+
+Functions present only in:
+
+- a paralog branch
+- a subclade after duplication
+
+These annotations:
+
+- Are down‑weighted
+- Receive lower scores because they are not ancestral to the full OG
+
+This reduces false functional transfers between paralogs — a known problem in v5. [[academic.oup.com](https://academic.oup.com)], [[cbgp.upm.es](https://cbgp.upm.es)]
+
+#### 2.4 Annotation source reliability (GO / KEGG evidence quality)
+
+eggNOG v7 also accounts for annotation provenance, including:
+
+- Curated vs automated sources
+- Agreement across databases
+- Redundancy of independent annotations
+
+Terms supported by:
+
+- Multiple curated annotations → higher score
+- Single weak annotation → lower score
+
+While eggNOG does not expose raw GO evidence codes, this weighting is part of the internal scoring model described in the v7 paper. [[academic.oup.com](https://academic.oup.com)]
+
+### 3. What the score is not
+
+Important to avoid misinterpretation:
+
+❌ It is not:
+
+- A probability of correctness
+- A p‑value
+- A BLAST or DIAMOND similarity score
+- A measure of expression or activity
+
+✅ It is:
+
+- A relative confidence score for functional assignment
+- Comparable within eggNOG v7, not across databases
+
+### 4. How to interpret the scores in practice
+
+While eggNOG does not publish a single hard cutoff, in practice:
+
+| Score range | Interpretation |
+|-------------|----------------|
+| High (top tier) | Strongly conserved, ancestral function |
+| Medium | Likely function, but clade‑restricted or partially conserved |
+| Low | Weak, lineage‑specific, or uncertain transfer |
+
+This makes it possible to:
+
+- Filter GO / KEGG terms by confidence
+- Prioritize annotations for downstream analyses
+- Avoid over‑annotation in comparative genomics
+
+Benchmarking against manually curated KEGG functional OGs showed that these scores correlate with higher functional consistency than v5 annotations. [[academic.oup.com](https://academic.oup.com)]
+
+### 5. Why this matters for downstream analyses
+
+**Functional enrichment**
+
+- You can weight genes by annotation confidence
+- Reduces noise in GO / KEGG enrichment
+
+**Cross‑species comparisons**
+
+- High‑score terms are safer for distant taxa
+- Low‑score terms flag recent innovations
+
+**Gene family evolution**
+
+- Scores highlight where functions were gained or specialized after duplication
+
+This is particularly relevant for eukaryotes and multidomain proteins, where v5 was weakest. [[cbgp.upm.es](https://cbgp.upm.es)]
