@@ -72,6 +72,11 @@ echo "✓ Diamond database: ${EGGNOG_DIAMOND_DB}"
 echo "✓ Master table: ${EGGNOG_MASTER_TABLE}"
 echo ""
 
+# Add eggnog7_annotator to PATH
+export PATH="${SCRIPT_DIR}/eggnog7_annotator:$PATH"
+echo "✓ Added eggnog7_annotator to PATH"
+echo ""
+
 # Load Diamond module
 if command -v module &> /dev/null && [ -n "${EGGNOG_MODULE:-}" ]; then
     echo "Loading module: ${EGGNOG_MODULE}"
