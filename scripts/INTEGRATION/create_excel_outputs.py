@@ -380,10 +380,31 @@ class EggNOG7Parser(AnnotationParser):
 class FantasiaParser(AnnotationParser):
     """Parser for FANTASIA AI-driven annotation output files"""
     
+    # Model names mapping for output file naming
+    MODEL_NAMES = {
+        'ESM_L0': 'ESM-2',
+        'Prot-T5_L0': 'ProtT5',
+        'Prost-T5_L0': 'ProstT5',
+        'Ankh3-Large_L0': 'Ankh3-Large',
+        'ESM3c_L0': 'ESM3c'
+    }
+    
+    def __init__(self, input_file: str, model_suffix: str = None):
+        """
+        Initialize parser with optional model suffix to filter specific model
+        
+        Args:
+            input_file: Path to FANTASIA output TSV file
+            model_suffix: If specified, only parse data for this model (e.g., 'ESM_L0')
+        """
+        super().__init__(input_file)
+        self.model_suffix = model_suffix
+    
     def parse(self):
         """
         Parse FANTASIA TSV format:
-        Columns: protein_id, predicted_function, confidence, top_similar_protein
+        Columns: accession, go_id, final_score_<model>, proteins
+        Creates results with gene_name, GO, final_score, proteins
         """
         self.results = []
         
@@ -402,10 +423,10 @@ class FantasiaParser(AnnotationParser):
                 if header_line is None:
                     header_line = line.strip().split('\t')
                     # Validate required columns exist
-                    required_cols = ['protein_id', 'predicted_function']
+                    required_cols = ['accession', 'go_id', 'proteins']
                     if not all(col in header_line for col in required_cols):
                         print(f"Warning: Missing required columns in {self.input_file}")
-                        print(f"Expected columns: {required_cols}, Found: {header_line}")
+                        print(f"Expected: {required_cols}")
                         return
                     continue
                 
@@ -418,32 +439,42 @@ class FantasiaParser(AnnotationParser):
                 # Create dictionary from header and values
                 row_dict = dict(zip(header_line, parts))
                 
-                gene_name = row_dict.get('protein_id', '')
-                predicted_function = row_dict.get('predicted_function', '')
-                confidence = row_dict.get('confidence', '')
-                top_similar_protein = row_dict.get('top_similar_protein', '')
+                accession = row_dict.get('accession', '')
+                go_id = row_dict.get('go_id', '')
+                proteins = row_dict.get('proteins', '')
                 
-                # Skip if no predicted function
-                if not predicted_function or predicted_function == '-':
+                # Skip if no GO term
+                if not go_id or go_id == '-':
                     continue
                 
-                # The predicted function is the functional term
-                functional_term = predicted_function
+                # Get final_score for the specific model
+                score_col = f'final_score_{self.model_suffix}' if self.model_suffix else None
+                final_score = row_dict.get(score_col, '') if score_col else ''
                 
-                # Build extra information from confidence and similar protein
-                extra_parts = []
-                if confidence:
-                    extra_parts.append(f"Confidence: {confidence}")
-                if top_similar_protein and top_similar_protein != '-':
-                    extra_parts.append(f"Similar: {top_similar_protein}")
-                
-                extra_info = "; ".join(extra_parts)
+                # Skip if this model has no score for this entry
+                if self.model_suffix and (not final_score or final_score.strip() == ''):
+                    continue
                 
                 self.results.append({
-                    'gene_name': gene_name,
-                    'functional_term': functional_term,
-                    'extra_information': extra_info
+                    'gene_name': accession,
+                    'functional_term': go_id,
+                    'extra_information': f"Score: {final_score}; Proteins: {proteins}" if final_score else f"Proteins: {proteins}"
                 })
+    
+    def to_dataframe(self) -> pd.DataFrame:
+        """Convert results to pandas DataFrame with FANTASIA-specific column names"""
+        if not self.results:
+            return pd.DataFrame(columns=['gene_name', 'GO', 'final_score', 'proteins'])
+        
+        df = pd.DataFrame(self.results)
+        # Rename columns to match FANTASIA expected format
+        df_fantasia = pd.DataFrame({
+            'gene_name': df['gene_name'],
+            'GO': df['functional_term'],
+            'final_score': df['extra_information'].apply(lambda x: x.split('Score: ')[1].split(';')[0] if 'Score: ' in x else ''),
+            'proteins': df['extra_information'].apply(lambda x: x.split('Proteins: ')[1] if 'Proteins: ' in x else '')
+        })
+        return df_fantasia
 
 
 def find_files(directory: str, pattern: str) -> List[str]:
@@ -573,7 +604,7 @@ def process_eggnog(results_dir: str, output_dir: str):
 
 
 def process_fantasia(results_dir: str, output_dir: str):
-    """Process all FANTASIA output files"""
+    """Process all FANTASIA output files and create one Excel per model"""
     print("\n" + "="*60)
     print("Processing FANTASIA Results")
     print("="*60)
@@ -583,7 +614,7 @@ def process_fantasia(results_dir: str, output_dir: str):
         print(f"Warning: FANTASIA directory not found: {fantasia_dir}")
         return
     
-    # Find all TSV files (FANTASIA outputs annotations.tsv)
+    # Find all TSV files (FANTASIA outputs)
     tsv_files = find_files(fantasia_dir, '*.tsv')
     
     if not tsv_files:
@@ -592,13 +623,25 @@ def process_fantasia(results_dir: str, output_dir: str):
     
     print(f"Found {len(tsv_files)} FANTASIA file(s)")
     
+    # Define the models to process
+    models = ['ESM_L0', 'Prot-T5_L0', 'Prost-T5_L0', 'Ankh3-Large_L0', 'ESM3c_L0']
+    
     for tsv_file in tsv_files:
         basename = os.path.basename(tsv_file).replace('.tsv', '')
-        output_file = os.path.join(output_dir, f"{basename}_fantasia_annotations.xlsx")
         
-        parser = FantasiaParser(tsv_file)
-        parser.parse()
-        parser.save_to_excel(output_file)
+        # Process each model separately
+        for model_suffix in models:
+            model_name = FantasiaParser.MODEL_NAMES.get(model_suffix, model_suffix)
+            output_file = os.path.join(output_dir, f"{basename}_fantasia_{model_name}_annotations.xlsx")
+            
+            parser = FantasiaParser(tsv_file, model_suffix=model_suffix)
+            parser.parse()
+            
+            # Only save if there are results for this model
+            if parser.results:
+                parser.save_to_excel(output_file)
+            else:
+                print(f"  Skipping {model_name}: No annotations found")
 
 
 def main():

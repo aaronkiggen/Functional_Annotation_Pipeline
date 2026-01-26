@@ -36,8 +36,10 @@ The script processes outputs from:
 
 4. **FANTASIA** - AI-driven functional annotation
    - Input: `*.tsv` files from FANTASIA output directory
-   - Functional terms: Predicted protein functions
-   - Extra information: Confidence scores, similar proteins
+   - Functional terms: GO terms
+   - Extra information: Final scores per model, similar proteins
+   - Output: One Excel file per model (ESM-2, ProtT5, ProstT5, Ankh3-Large, ESM3c)
+   - Columns: gene_name, GO, final_score, proteins
 
 **Note**: OrthoFinder outputs are excluded as per requirements.
 
@@ -125,7 +127,11 @@ The script generates one Excel file per input sample and tool:
 - `{sample}_interproscan_annotations.xlsx` - InterProScan results
 - `{sample}_eggnog_v5_annotations.xlsx` - EggNOG v5 results
 - `{sample}_eggnog_v7_annotations.xlsx` - EggNOG v7 results
-- `{sample}_fantasia_annotations.xlsx` - FANTASIA results
+- `{sample}_fantasia_ESM-2_annotations.xlsx` - FANTASIA ESM-2 model results
+- `{sample}_fantasia_ProtT5_annotations.xlsx` - FANTASIA ProtT5 model results
+- `{sample}_fantasia_ProstT5_annotations.xlsx` - FANTASIA ProstT5 model results
+- `{sample}_fantasia_Ankh3-Large_annotations.xlsx` - FANTASIA Ankh3-Large model results
+- `{sample}_fantasia_ESM3c_annotations.xlsx` - FANTASIA ESM3c model results
 
 Each Excel file includes:
 - Formatted headers (blue background, white text)
@@ -139,7 +145,13 @@ Each Excel file includes:
 | gene001.t1 | K00001 | Score: 150.2, E-value: 1.2e-45, Threshold: 100.00 |
 | gene001.t1 | GO:0005515 | Domain: Zinc finger (PF00001); InterPro: Zinc finger domain (IPR000001) |
 | gene002.t1 | K00002 | Description: Protein kinase; Best hit: 12345.XP_001; E-value: 1e-100 |
-| gene003.t1 | Protein kinase, ATP-binding | Confidence: 0.95; Similar: sp|P12345|PKA_HUMAN |
+
+For FANTASIA results (one file per model):
+
+| gene_name | GO | final_score | proteins |
+|-----------|-------|-------------|----------|
+| KAK4001893.1 | GO:0000281 | 0.5404 | TALAN_HUMAN |
+| KAK4001894.1 | GO:0003676 | 0.5876 | DDX5_HUMAN;RBM3_MOUSE |
 
 #### Integration with Pipeline
 
