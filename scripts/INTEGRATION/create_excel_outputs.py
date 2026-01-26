@@ -18,9 +18,13 @@ Description:
         - Per-term: gene, analysis, score, InterPro_accession, InterPro_description, GO, Pathways
         - Per-gene: gene, GO (grouped), Pathways (grouped)
     
-    EggNOG-mapper:
+    EggNOG-mapper v5:
         - Per-term: gene, term_type, term
         - Per-gene: gene, Description, GOs, KEGG_ko, KEGG_Pathway, KEGG_Reaction, KEGG_rclass, PFAM
+    
+    EggNOG-mapper v7:
+        - Per-term: gene, term_type, term, score
+        - Per-gene: gene, eggnog_protein_ID, GOs (with scores), KEGGs (with scores)
     
     FANTASIA:
         - Per-term: gene, GO, term_count, final_score (separate file per model)
