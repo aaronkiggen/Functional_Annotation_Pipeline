@@ -87,8 +87,9 @@ class KofamScanParser(AnnotationParser):
     
     def parse(self):
         """
-        Parse KofamScan mapper output format:
-        # gene_name    KO      threshold    score    E-value
+        Parse KofamScan pre-script output format:
+        gene_name
+        gene_name    KEGG_term
         """
         self.results = []
         
@@ -103,24 +104,68 @@ class KofamScanParser(AnnotationParser):
                     continue
                 
                 parts = line.strip().split('\t')
-                if len(parts) >= 5:
-                    gene_name = parts[0]
-                    ko_id = parts[1]
-                    threshold = parts[2]
-                    score = parts[3]
-                    evalue = parts[4]
-                    
-                    # KO is the functional term (KEGG)
-                    functional_term = ko_id
-                    
-                    # Extra information includes score and E-value
-                    extra_info = f"Score: {score}, E-value: {evalue}, Threshold: {threshold}"
-                    
+                gene_name = parts[0] if len(parts) >= 1 else ""
+                
+                # Gene may or may not have a KEGG term
+                if len(parts) >= 2:
+                    kegg_term = parts[1]
                     self.results.append({
                         'gene_name': gene_name,
-                        'functional_term': functional_term,
-                        'extra_information': extra_info
+                        'KEGG': kegg_term
                     })
+                else:
+                    # Gene without KEGG term
+                    self.results.append({
+                        'gene_name': gene_name,
+                        'KEGG': ''
+                    })
+    
+    def to_dataframe(self) -> pd.DataFrame:
+        """Convert results to pandas DataFrame with KofamScan-specific columns"""
+        if not self.results:
+            return pd.DataFrame(columns=['gene_name', 'KEGG'])
+        return pd.DataFrame(self.results)
+    
+    def save_to_excel(self, output_file: str):
+        """Save results to Excel file with KofamScan-specific formatting"""
+        df = self.to_dataframe()
+        
+        if df.empty:
+            print(f"Warning: No data to write for {output_file}")
+            return
+        
+        # Create Excel writer
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Annotations')
+            
+            # Get workbook and worksheet
+            workbook = writer.book
+            worksheet = writer.sheets['Annotations']
+            
+            # Format header
+            header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            header_font = Font(bold=True, color="FFFFFF")
+            
+            for cell in worksheet[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center')
+            
+            # Adjust column widths
+            worksheet.column_dimensions['A'].width = 25  # gene_name
+            worksheet.column_dimensions['B'].width = 20  # KEGG
+        
+        print(f"✓ Created: {output_file} ({len(df)} rows)")
+    
+    def create_per_gene_output(self) -> pd.DataFrame:
+        """Create per-gene output with grouped KEGG terms"""
+        if not self.results:
+            return pd.DataFrame(columns=['gene_name', 'KEGG'])
+        
+        df = pd.DataFrame(self.results)
+        # Group by gene and concatenate KEGG terms
+        per_gene = df.groupby('gene_name')['KEGG'].apply(lambda x: ', '.join(filter(None, x))).reset_index()
+        return per_gene
 
 
 class InterProScanParser(AnnotationParser):
@@ -129,8 +174,9 @@ class InterProScanParser(AnnotationParser):
     def parse(self):
         """
         Parse InterProScan TSV format:
-        Columns: 0=Protein_ID, 4=Signature_accession, 5=Signature_description,
-                11=InterPro_ID, 12=InterPro_description, 13=GO_terms
+        Desired output: gene / analysis (col 4) / score (col 9) / col 12 / col 13 / GO (col 14) / Pathways (col 15)
+        TSV columns: 0=Protein accession, 3=Analysis, 8=Score, 11=InterPro accession, 
+                    12=InterPro description, 13=GO annotations, 14=Pathways
         """
         self.results = []
         
@@ -145,51 +191,98 @@ class InterProScanParser(AnnotationParser):
                     continue
                 
                 parts = line.strip().split('\t')
-                if len(parts) < 6:
+                if len(parts) < 4:
                     continue
                 
-                gene_name = parts[0]
-                signature_acc = parts[4] if len(parts) > 4 else ""
-                signature_desc = parts[5] if len(parts) > 5 else ""
-                interpro_id = parts[11] if len(parts) > 11 else ""
-                interpro_desc = parts[12] if len(parts) > 12 else ""
-                go_terms = parts[13] if len(parts) > 13 else ""
+                gene_name = parts[0] if len(parts) > 0 else ""
+                analysis = parts[3] if len(parts) > 3 else ""  # Column 4 (0-indexed = 3)
+                score = parts[8] if len(parts) > 8 else ""     # Column 9 (0-indexed = 8)
+                interpro_acc = parts[11] if len(parts) > 11 else ""  # Column 12 (0-indexed = 11)
+                interpro_desc = parts[12] if len(parts) > 12 else ""  # Column 13 (0-indexed = 12)
+                go_terms = parts[13] if len(parts) > 13 else ""      # Column 14 (0-indexed = 13)
+                pathways = parts[14] if len(parts) > 14 else ""      # Column 15 (0-indexed = 14)
                 
-                # If GO terms are present, create entries for each GO term
-                if go_terms:
-                    go_list = go_terms.split('|')
-                    for go_term in go_list:
-                        if go_term.strip():
-                            # GO term is the functional term
-                            functional_term = go_term.strip()
-                            
-                            # Extra information includes signature and InterPro details
-                            extra_parts = []
-                            if signature_desc:
-                                extra_parts.append(f"Domain: {signature_desc} ({signature_acc})")
-                            if interpro_desc and interpro_id:
-                                extra_parts.append(f"InterPro: {interpro_desc} ({interpro_id})")
-                            
-                            extra_info = "; ".join(extra_parts) if extra_parts else signature_desc
-                            
-                            self.results.append({
-                                'gene_name': gene_name,
-                                'functional_term': functional_term,
-                                'extra_information': extra_info
-                            })
-                else:
-                    # No GO terms, but we can still record domain information
-                    if signature_acc:
-                        functional_term = signature_acc
-                        extra_info = signature_desc if signature_desc else ""
-                        if interpro_id:
-                            extra_info += f" | InterPro: {interpro_desc} ({interpro_id})" if interpro_desc else f" | InterPro: {interpro_id}"
-                        
-                        self.results.append({
-                            'gene_name': gene_name,
-                            'functional_term': functional_term,
-                            'extra_information': extra_info
-                        })
+                # Store one row per hit
+                self.results.append({
+                    'gene': gene_name,
+                    'analysis': analysis,
+                    'score': score,
+                    'InterPro_accession': interpro_acc,
+                    'InterPro_description': interpro_desc,
+                    'GO': go_terms,
+                    'Pathways': pathways
+                })
+    
+    def to_dataframe(self) -> pd.DataFrame:
+        """Convert results to pandas DataFrame with InterProScan-specific columns"""
+        if not self.results:
+            return pd.DataFrame(columns=['gene', 'analysis', 'score', 'InterPro_accession', 
+                                        'InterPro_description', 'GO', 'Pathways'])
+        return pd.DataFrame(self.results)
+    
+    def save_to_excel(self, output_file: str):
+        """Save results to Excel file with InterProScan-specific formatting"""
+        df = self.to_dataframe()
+        
+        if df.empty:
+            print(f"Warning: No data to write for {output_file}")
+            return
+        
+        # Create Excel writer
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Annotations')
+            
+            # Get workbook and worksheet
+            workbook = writer.book
+            worksheet = writer.sheets['Annotations']
+            
+            # Format header
+            header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            header_font = Font(bold=True, color="FFFFFF")
+            
+            for cell in worksheet[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center')
+            
+            # Adjust column widths
+            worksheet.column_dimensions['A'].width = 25  # gene
+            worksheet.column_dimensions['B'].width = 20  # analysis
+            worksheet.column_dimensions['C'].width = 15  # score
+            worksheet.column_dimensions['D'].width = 20  # InterPro_accession
+            worksheet.column_dimensions['E'].width = 40  # InterPro_description
+            worksheet.column_dimensions['F'].width = 60  # GO
+            worksheet.column_dimensions['G'].width = 30  # Pathways
+        
+        print(f"✓ Created: {output_file} ({len(df)} rows)")
+    
+    def create_per_gene_output(self) -> pd.DataFrame:
+        """Create per-gene output with grouped GO and Pathways"""
+        if not self.results:
+            return pd.DataFrame(columns=['gene', 'GO', 'Pathways'])
+        
+        df = pd.DataFrame(self.results)
+        
+        # Aggregate GO terms and Pathways per gene
+        def aggregate_values(series):
+            # Filter out empty strings and join unique values
+            values = [v for v in series if v and v.strip()]
+            unique_values = []
+            for v in values:
+                # Split by pipe and comma to handle multiple GO terms in one cell
+                sub_values = v.replace('|', ',').split(',')
+                for sv in sub_values:
+                    sv = sv.strip()
+                    if sv and sv not in unique_values:
+                        unique_values.append(sv)
+            return ', '.join(unique_values)
+        
+        per_gene = df.groupby('gene').agg({
+            'GO': aggregate_values,
+            'Pathways': aggregate_values
+        }).reset_index()
+        
+        return per_gene
 
 
 class EggNOGParser(AnnotationParser):
@@ -198,8 +291,8 @@ class EggNOGParser(AnnotationParser):
     def parse(self):
         """
         Parse EggNOG .emapper.annotations format:
-        Columns include: query, seed_ortholog, evalue, score, eggNOG_OGs,
-                        GO_terms, KEGG_ko, Description
+        Desired output: gene / Description / GOs / KEGG_ko / KEGG_Pathway / KEGG_Reaction / KEGG_rclass / PFAM
+        First 2 rows are comment lines starting with ##
         """
         self.results = []
         
@@ -216,13 +309,11 @@ class EggNOGParser(AnnotationParser):
         with open_func(self.input_file, mode) as f:
             header_line = None
             for line in f:
-                # Find header line
-                if line.startswith('#query'):
-                    header_line = line.strip().lstrip('#').split('\t')
-                    continue
-                
-                # Skip other comments
+                # Skip comment lines (including the first 2 rows with ##)
                 if line.startswith('#'):
+                    # Find header line (starts with #query or #)
+                    if line.startswith('#query') or (not line.startswith('##') and header_line is None):
+                        header_line = line.strip().lstrip('#').split('\t')
                     continue
                 
                 parts = line.strip().split('\t')
@@ -234,59 +325,107 @@ class EggNOGParser(AnnotationParser):
                 row_dict = dict(zip(header_line, parts))
                 
                 gene_name = row_dict.get('query', '')
+                description = row_dict.get('Description', '') or row_dict.get('eggNOG_desc', '')
                 go_terms = row_dict.get('GOs', '') or row_dict.get('GO_terms', '')
                 kegg_ko = row_dict.get('KEGG_ko', '') or row_dict.get('KEGG_KO', '')
-                description = row_dict.get('Description', '') or row_dict.get('eggNOG_desc', '')
-                seed_ortholog = row_dict.get('seed_ortholog', '')
-                evalue = row_dict.get('evalue', '')
-                score = row_dict.get('score', '')
+                kegg_pathway = row_dict.get('KEGG_Pathway', '') or row_dict.get('KEGG_pathway', '')
+                kegg_reaction = row_dict.get('KEGG_Reaction', '') or row_dict.get('KEGG_reaction', '')
+                kegg_rclass = row_dict.get('KEGG_rclass', '')
+                pfam = row_dict.get('PFAMs', '') or row_dict.get('PFAM', '')
                 
-                # Process GO terms
-                if go_terms and go_terms != '-':
-                    go_list = go_terms.split(',')
-                    for go_term in go_list:
-                        go_term = go_term.strip()
-                        if go_term:
-                            extra_parts = []
-                            if description and description != '-':
-                                extra_parts.append(f"Description: {description}")
-                            if seed_ortholog and seed_ortholog != '-':
-                                extra_parts.append(f"Best hit: {seed_ortholog}")
-                            if evalue and evalue != '-':
-                                extra_parts.append(f"E-value: {evalue}")
-                            
-                            extra_info = "; ".join(extra_parts)
-                            
-                            self.results.append({
-                                'gene_name': gene_name,
-                                'functional_term': go_term,
-                                'extra_information': extra_info
-                            })
-                
-                # Process KEGG KO terms
-                if kegg_ko and kegg_ko != '-':
-                    ko_list = kegg_ko.split(',')
-                    for ko in ko_list:
-                        ko = ko.strip()
-                        # Remove 'ko:' prefix if present
-                        if ko.startswith(self.KEGG_PREFIX):
-                            ko = ko[self.KEGG_PREFIX_LEN:]
-                        if ko:
-                            extra_parts = []
-                            if description and description != '-':
-                                extra_parts.append(f"Description: {description}")
-                            if seed_ortholog and seed_ortholog != '-':
-                                extra_parts.append(f"Best hit: {seed_ortholog}")
-                            if score and score != '-':
-                                extra_parts.append(f"Score: {score}")
-                            
-                            extra_info = "; ".join(extra_parts)
-                            
-                            self.results.append({
-                                'gene_name': gene_name,
-                                'functional_term': ko,
-                                'extra_information': extra_info
-                            })
+                # Store one row per gene
+                self.results.append({
+                    'gene': gene_name,
+                    'Description': description if description != '-' else '',
+                    'GOs': go_terms if go_terms != '-' else '',
+                    'KEGG_ko': kegg_ko if kegg_ko != '-' else '',
+                    'KEGG_Pathway': kegg_pathway if kegg_pathway != '-' else '',
+                    'KEGG_Reaction': kegg_reaction if kegg_reaction != '-' else '',
+                    'KEGG_rclass': kegg_rclass if kegg_rclass != '-' else '',
+                    'PFAM': pfam if pfam != '-' else ''
+                })
+    
+    def to_dataframe(self) -> pd.DataFrame:
+        """Convert results to pandas DataFrame with EggNOG-specific columns"""
+        if not self.results:
+            return pd.DataFrame(columns=['gene', 'Description', 'GOs', 'KEGG_ko', 
+                                        'KEGG_Pathway', 'KEGG_Reaction', 'KEGG_rclass', 'PFAM'])
+        return pd.DataFrame(self.results)
+    
+    def save_to_excel(self, output_file: str):
+        """Save results to Excel file with EggNOG-specific formatting"""
+        df = self.to_dataframe()
+        
+        if df.empty:
+            print(f"Warning: No data to write for {output_file}")
+            return
+        
+        # Create Excel writer
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Annotations')
+            
+            # Get workbook and worksheet
+            workbook = writer.book
+            worksheet = writer.sheets['Annotations']
+            
+            # Format header
+            header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            header_font = Font(bold=True, color="FFFFFF")
+            
+            for cell in worksheet[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center')
+            
+            # Adjust column widths
+            worksheet.column_dimensions['A'].width = 25  # gene
+            worksheet.column_dimensions['B'].width = 50  # Description
+            worksheet.column_dimensions['C'].width = 60  # GOs
+            worksheet.column_dimensions['D'].width = 20  # KEGG_ko
+            worksheet.column_dimensions['E'].width = 30  # KEGG_Pathway
+            worksheet.column_dimensions['F'].width = 30  # KEGG_Reaction
+            worksheet.column_dimensions['G'].width = 30  # KEGG_rclass
+            worksheet.column_dimensions['H'].width = 40  # PFAM
+        
+        print(f"✓ Created: {output_file} ({len(df)} rows)")
+    
+    def create_per_term_output(self) -> pd.DataFrame:
+        """Create per-term output with 1 row per GO or KEGG term"""
+        if not self.results:
+            return pd.DataFrame(columns=['gene', 'term_type', 'term'])
+        
+        rows = []
+        for result in self.results:
+            gene = result['gene']
+            
+            # Process GO terms
+            if result['GOs']:
+                go_list = result['GOs'].split(',')
+                for go_term in go_list:
+                    go_term = go_term.strip()
+                    if go_term:
+                        rows.append({
+                            'gene': gene,
+                            'term_type': 'GO',
+                            'term': go_term
+                        })
+            
+            # Process KEGG terms
+            if result['KEGG_ko']:
+                kegg_list = result['KEGG_ko'].split(',')
+                for kegg_term in kegg_list:
+                    kegg_term = kegg_term.strip()
+                    # Remove 'ko:' prefix if present
+                    if kegg_term.startswith('ko:'):
+                        kegg_term = kegg_term[3:]
+                    if kegg_term:
+                        rows.append({
+                            'gene': gene,
+                            'term_type': 'KEGG',
+                            'term': kegg_term
+                        })
+        
+        return pd.DataFrame(rows)
 
 
 class EggNOG7Parser(AnnotationParser):
@@ -295,7 +434,7 @@ class EggNOG7Parser(AnnotationParser):
     def parse(self):
         """
         Parse EggNOG 7 .eggnog.tsv.gz format:
-        Tab-separated with columns for gene, GO terms, KEGG terms, etc.
+        Desired output: gene / Description / GOs / KEGG_ko / KEGG_Pathway / KEGG_Reaction / KEGG_rclass / PFAM
         """
         self.results = []
         
@@ -307,13 +446,11 @@ class EggNOG7Parser(AnnotationParser):
         with gzip.open(self.input_file, 'rt') as f:
             header_line = None
             for line in f:
-                # Find header line
-                if line.startswith('#query'):
-                    header_line = line.strip().lstrip('#').split('\t')
-                    continue
-                
-                # Skip other comments
+                # Skip comment lines
                 if line.startswith('#'):
+                    # Find header line
+                    if line.startswith('#query') or (not line.startswith('##') and header_line is None):
+                        header_line = line.strip().lstrip('#').split('\t')
                     continue
                 
                 parts = line.strip().split('\t')
@@ -325,56 +462,107 @@ class EggNOG7Parser(AnnotationParser):
                 row_dict = dict(zip(header_line, parts))
                 
                 gene_name = row_dict.get('query', '')
+                description = row_dict.get('description', '') or row_dict.get('Description', '')
                 go_terms = row_dict.get('GOs', '') or row_dict.get('GO', '')
                 kegg_ko = row_dict.get('KEGG_KO', '') or row_dict.get('KEGG_ko', '')
-                description = row_dict.get('description', '') or row_dict.get('Description', '')
-                protein_name = row_dict.get('protein_name', '') or row_dict.get('eggNOG_protein', '')
-                evalue = row_dict.get('evalue', '')
+                kegg_pathway = row_dict.get('KEGG_Pathway', '') or row_dict.get('KEGG_pathway', '')
+                kegg_reaction = row_dict.get('KEGG_Reaction', '') or row_dict.get('KEGG_reaction', '')
+                kegg_rclass = row_dict.get('KEGG_rclass', '')
+                pfam = row_dict.get('PFAMs', '') or row_dict.get('PFAM', '')
                 
-                # Process GO terms
-                if go_terms and go_terms != '-':
-                    go_list = go_terms.split(',')
-                    for go_term in go_list:
-                        go_term = go_term.strip()
-                        if go_term:
-                            extra_parts = []
-                            if protein_name and protein_name != '-':
-                                extra_parts.append(f"Protein: {protein_name}")
-                            if description and description != '-':
-                                extra_parts.append(f"Description: {description}")
-                            if evalue and evalue != '-':
-                                extra_parts.append(f"E-value: {evalue}")
-                            
-                            extra_info = "; ".join(extra_parts)
-                            
-                            self.results.append({
-                                'gene_name': gene_name,
-                                'functional_term': go_term,
-                                'extra_information': extra_info
-                            })
-                
-                # Process KEGG KO terms
-                if kegg_ko and kegg_ko != '-':
-                    ko_list = kegg_ko.split(',')
-                    for ko in ko_list:
-                        ko = ko.strip()
-                        # Remove 'ko:' prefix if present
-                        if ko.startswith(self.KEGG_PREFIX):
-                            ko = ko[self.KEGG_PREFIX_LEN:]
-                        if ko:
-                            extra_parts = []
-                            if protein_name and protein_name != '-':
-                                extra_parts.append(f"Protein: {protein_name}")
-                            if description and description != '-':
-                                extra_parts.append(f"Description: {description}")
-                            
-                            extra_info = "; ".join(extra_parts)
-                            
-                            self.results.append({
-                                'gene_name': gene_name,
-                                'functional_term': ko,
-                                'extra_information': extra_info
-                            })
+                # Store one row per gene
+                self.results.append({
+                    'gene': gene_name,
+                    'Description': description if description != '-' else '',
+                    'GOs': go_terms if go_terms != '-' else '',
+                    'KEGG_ko': kegg_ko if kegg_ko != '-' else '',
+                    'KEGG_Pathway': kegg_pathway if kegg_pathway != '-' else '',
+                    'KEGG_Reaction': kegg_reaction if kegg_reaction != '-' else '',
+                    'KEGG_rclass': kegg_rclass if kegg_rclass != '-' else '',
+                    'PFAM': pfam if pfam != '-' else ''
+                })
+    
+    def to_dataframe(self) -> pd.DataFrame:
+        """Convert results to pandas DataFrame with EggNOG-specific columns"""
+        if not self.results:
+            return pd.DataFrame(columns=['gene', 'Description', 'GOs', 'KEGG_ko', 
+                                        'KEGG_Pathway', 'KEGG_Reaction', 'KEGG_rclass', 'PFAM'])
+        return pd.DataFrame(self.results)
+    
+    def save_to_excel(self, output_file: str):
+        """Save results to Excel file with EggNOG-specific formatting"""
+        df = self.to_dataframe()
+        
+        if df.empty:
+            print(f"Warning: No data to write for {output_file}")
+            return
+        
+        # Create Excel writer
+        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Annotations')
+            
+            # Get workbook and worksheet
+            workbook = writer.book
+            worksheet = writer.sheets['Annotations']
+            
+            # Format header
+            header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            header_font = Font(bold=True, color="FFFFFF")
+            
+            for cell in worksheet[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center')
+            
+            # Adjust column widths
+            worksheet.column_dimensions['A'].width = 25  # gene
+            worksheet.column_dimensions['B'].width = 50  # Description
+            worksheet.column_dimensions['C'].width = 60  # GOs
+            worksheet.column_dimensions['D'].width = 20  # KEGG_ko
+            worksheet.column_dimensions['E'].width = 30  # KEGG_Pathway
+            worksheet.column_dimensions['F'].width = 30  # KEGG_Reaction
+            worksheet.column_dimensions['G'].width = 30  # KEGG_rclass
+            worksheet.column_dimensions['H'].width = 40  # PFAM
+        
+        print(f"✓ Created: {output_file} ({len(df)} rows)")
+    
+    def create_per_term_output(self) -> pd.DataFrame:
+        """Create per-term output with 1 row per GO or KEGG term"""
+        if not self.results:
+            return pd.DataFrame(columns=['gene', 'term_type', 'term'])
+        
+        rows = []
+        for result in self.results:
+            gene = result['gene']
+            
+            # Process GO terms
+            if result['GOs']:
+                go_list = result['GOs'].split(',')
+                for go_term in go_list:
+                    go_term = go_term.strip()
+                    if go_term:
+                        rows.append({
+                            'gene': gene,
+                            'term_type': 'GO',
+                            'term': go_term
+                        })
+            
+            # Process KEGG terms
+            if result['KEGG_ko']:
+                kegg_list = result['KEGG_ko'].split(',')
+                for kegg_term in kegg_list:
+                    kegg_term = kegg_term.strip()
+                    # Remove 'ko:' prefix if present
+                    if kegg_term.startswith('ko:'):
+                        kegg_term = kegg_term[3:]
+                    if kegg_term:
+                        rows.append({
+                            'gene': gene,
+                            'term_type': 'KEGG',
+                            'term': kegg_term
+                        })
+        
+        return pd.DataFrame(rows)
 
 
 class FantasiaParser(AnnotationParser):
@@ -403,8 +591,8 @@ class FantasiaParser(AnnotationParser):
     def parse(self):
         """
         Parse FANTASIA TSV format:
-        Columns: accession, go_id, final_score_<model>, proteins
-        Creates results with gene_name, GO, final_score, proteins
+        Desired output: gene / GO / term_count / final_score
+        Columns: accession, go_id, term_count, final_score_<model>, proteins
         """
         self.results = []
         
@@ -423,7 +611,7 @@ class FantasiaParser(AnnotationParser):
                 if header_line is None:
                     header_line = line.strip().split('\t')
                     # Validate required columns exist
-                    required_cols = ['accession', 'go_id', 'proteins']
+                    required_cols = ['accession', 'go_id']
                     if not all(col in header_line for col in required_cols):
                         print(f"Warning: Missing required columns in {self.input_file}")
                         print(f"Expected: {required_cols}")
@@ -439,9 +627,9 @@ class FantasiaParser(AnnotationParser):
                 # Create dictionary from header and values
                 row_dict = dict(zip(header_line, parts))
                 
-                accession = row_dict.get('accession', '')
+                gene_name = row_dict.get('accession', '')
                 go_id = row_dict.get('go_id', '')
-                proteins = row_dict.get('proteins', '')
+                term_count = row_dict.get('term_count', '')
                 
                 # Skip if no GO term
                 if not go_id or go_id == '-':
@@ -456,26 +644,17 @@ class FantasiaParser(AnnotationParser):
                     continue
                 
                 self.results.append({
-                    'gene_name': accession,
-                    'functional_term': go_id,
-                    'extra_information': final_score,  # Store score directly
-                    'proteins': proteins  # Store proteins separately
+                    'gene': gene_name,
+                    'GO': go_id,
+                    'term_count': term_count,
+                    'final_score': final_score
                 })
     
     def to_dataframe(self) -> pd.DataFrame:
         """Convert results to pandas DataFrame with FANTASIA-specific column names"""
         if not self.results:
-            return pd.DataFrame(columns=['gene_name', 'GO', 'final_score', 'proteins'])
-        
-        df = pd.DataFrame(self.results)
-        # Rename columns to match FANTASIA expected format
-        df_fantasia = pd.DataFrame({
-            'gene_name': df['gene_name'],
-            'GO': df['functional_term'],
-            'final_score': df['extra_information'],  # Already the score
-            'proteins': df['proteins']  # Already the proteins
-        })
-        return df_fantasia
+            return pd.DataFrame(columns=['gene', 'GO', 'term_count', 'final_score'])
+        return pd.DataFrame(self.results)
     
     def save_to_excel(self, output_file: str):
         """Save results to Excel file with FANTASIA-specific formatting"""
@@ -503,12 +682,22 @@ class FantasiaParser(AnnotationParser):
                 cell.alignment = Alignment(horizontal='center')
             
             # Adjust column widths for FANTASIA format
-            worksheet.column_dimensions['A'].width = 25  # gene_name
+            worksheet.column_dimensions['A'].width = 25  # gene
             worksheet.column_dimensions['B'].width = 20  # GO
-            worksheet.column_dimensions['C'].width = 15  # final_score
-            worksheet.column_dimensions['D'].width = 40  # proteins
+            worksheet.column_dimensions['C'].width = 15  # term_count
+            worksheet.column_dimensions['D'].width = 15  # final_score
         
         print(f"✓ Created: {output_file} ({len(df)} rows)")
+    
+    def create_per_gene_output(self) -> pd.DataFrame:
+        """Create per-gene output with grouped GO terms"""
+        if not self.results:
+            return pd.DataFrame(columns=['gene', 'GO'])
+        
+        df = pd.DataFrame(self.results)
+        # Group by gene and concatenate GO terms
+        per_gene = df.groupby('gene')['GO'].apply(lambda x: ', '.join(x)).reset_index()
+        return per_gene
 
 
 def find_files(directory: str, pattern: str) -> List[str]:
@@ -547,11 +736,39 @@ def process_kofamscan(results_dir: str, output_dir: str):
     
     for mapper_file in mapper_files:
         basename = os.path.basename(mapper_file).replace('_kofam_mapper.tsv', '')
-        output_file = os.path.join(output_dir, f"{basename}_kofamscan_annotations.xlsx")
         
         parser = KofamScanParser(mapper_file)
         parser.parse()
-        parser.save_to_excel(output_file)
+        
+        # Save per-term output (1 row = 1 KEGG term)
+        output_file_per_term = os.path.join(output_dir, f"{basename}_kofamscan_per_term.xlsx")
+        parser.save_to_excel(output_file_per_term)
+        
+        # Save per-gene output (1 row = 1 gene with grouped KEGG terms)
+        per_gene_df = parser.create_per_gene_output()
+        if not per_gene_df.empty:
+            output_file_per_gene = os.path.join(output_dir, f"{basename}_kofamscan_per_gene.xlsx")
+            with pd.ExcelWriter(output_file_per_gene, engine='openpyxl') as writer:
+                per_gene_df.to_excel(writer, index=False, sheet_name='Annotations')
+                
+                # Get workbook and worksheet
+                workbook = writer.book
+                worksheet = writer.sheets['Annotations']
+                
+                # Format header
+                header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+                header_font = Font(bold=True, color="FFFFFF")
+                
+                for cell in worksheet[1]:
+                    cell.fill = header_fill
+                    cell.font = header_font
+                    cell.alignment = Alignment(horizontal='center')
+                
+                # Adjust column widths
+                worksheet.column_dimensions['A'].width = 25  # gene_name
+                worksheet.column_dimensions['B'].width = 60  # KEGG (grouped)
+            
+            print(f"✓ Created: {output_file_per_gene} ({len(per_gene_df)} rows)")
 
 
 def process_interproscan(results_dir: str, output_dir: str):
@@ -576,11 +793,40 @@ def process_interproscan(results_dir: str, output_dir: str):
     
     for tsv_file in tsv_files:
         basename = os.path.basename(tsv_file).replace('.tsv', '')
-        output_file = os.path.join(output_dir, f"{basename}_interproscan_annotations.xlsx")
         
         parser = InterProScanParser(tsv_file)
         parser.parse()
-        parser.save_to_excel(output_file)
+        
+        # Save per-term output (1 row = 1 hit)
+        output_file_per_term = os.path.join(output_dir, f"{basename}_interproscan_per_term.xlsx")
+        parser.save_to_excel(output_file_per_term)
+        
+        # Save per-gene output (1 row = 1 gene with grouped GO and Pathways)
+        per_gene_df = parser.create_per_gene_output()
+        if not per_gene_df.empty:
+            output_file_per_gene = os.path.join(output_dir, f"{basename}_interproscan_per_gene.xlsx")
+            with pd.ExcelWriter(output_file_per_gene, engine='openpyxl') as writer:
+                per_gene_df.to_excel(writer, index=False, sheet_name='Annotations')
+                
+                # Get workbook and worksheet
+                workbook = writer.book
+                worksheet = writer.sheets['Annotations']
+                
+                # Format header
+                header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+                header_font = Font(bold=True, color="FFFFFF")
+                
+                for cell in worksheet[1]:
+                    cell.fill = header_fill
+                    cell.font = header_font
+                    cell.alignment = Alignment(horizontal='center')
+                
+                # Adjust column widths
+                worksheet.column_dimensions['A'].width = 25  # gene
+                worksheet.column_dimensions['B'].width = 80  # GO (grouped)
+                worksheet.column_dimensions['C'].width = 40  # Pathways (grouped)
+            
+            print(f"✓ Created: {output_file_per_gene} ({len(per_gene_df)} rows)")
 
 
 def process_eggnog(results_dir: str, output_dir: str):
@@ -608,11 +854,40 @@ def process_eggnog(results_dir: str, output_dir: str):
             for annot_file in annotation_files:
                 # Extract sample name from path
                 basename = os.path.basename(annot_file).replace('.emapper.annotations', '')
-                output_file = os.path.join(output_dir, f"{basename}_eggnog_v5_annotations.xlsx")
                 
                 parser = EggNOGParser(annot_file)
                 parser.parse()
-                parser.save_to_excel(output_file)
+                
+                # Save per-gene output (1 row = 1 gene, already the desired format)
+                output_file_per_gene = os.path.join(output_dir, f"{basename}_eggnog_v5_per_gene.xlsx")
+                parser.save_to_excel(output_file_per_gene)
+                
+                # Save per-term output (1 row = 1 GO or KEGG term)
+                per_term_df = parser.create_per_term_output()
+                if not per_term_df.empty:
+                    output_file_per_term = os.path.join(output_dir, f"{basename}_eggnog_v5_per_term.xlsx")
+                    with pd.ExcelWriter(output_file_per_term, engine='openpyxl') as writer:
+                        per_term_df.to_excel(writer, index=False, sheet_name='Annotations')
+                        
+                        # Get workbook and worksheet
+                        workbook = writer.book
+                        worksheet = writer.sheets['Annotations']
+                        
+                        # Format header
+                        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+                        header_font = Font(bold=True, color="FFFFFF")
+                        
+                        for cell in worksheet[1]:
+                            cell.fill = header_fill
+                            cell.font = header_font
+                            cell.alignment = Alignment(horizontal='center')
+                        
+                        # Adjust column widths
+                        worksheet.column_dimensions['A'].width = 25  # gene
+                        worksheet.column_dimensions['B'].width = 15  # term_type
+                        worksheet.column_dimensions['C'].width = 30  # term
+                    
+                    print(f"✓ Created: {output_file_per_term} ({len(per_term_df)} rows)")
         else:
             print("No EggNOG v5 annotation files found")
     
@@ -625,11 +900,40 @@ def process_eggnog(results_dir: str, output_dir: str):
             print(f"Found {len(tsv_gz_files)} EggNOG v7 annotation file(s)")
             for tsv_gz_file in tsv_gz_files:
                 basename = os.path.basename(tsv_gz_file).replace('.eggnog.tsv.gz', '')
-                output_file = os.path.join(output_dir, f"{basename}_eggnog_v7_annotations.xlsx")
                 
                 parser = EggNOG7Parser(tsv_gz_file)
                 parser.parse()
-                parser.save_to_excel(output_file)
+                
+                # Save per-gene output (1 row = 1 gene)
+                output_file_per_gene = os.path.join(output_dir, f"{basename}_eggnog_v7_per_gene.xlsx")
+                parser.save_to_excel(output_file_per_gene)
+                
+                # Save per-term output (1 row = 1 GO or KEGG term)
+                per_term_df = parser.create_per_term_output()
+                if not per_term_df.empty:
+                    output_file_per_term = os.path.join(output_dir, f"{basename}_eggnog_v7_per_term.xlsx")
+                    with pd.ExcelWriter(output_file_per_term, engine='openpyxl') as writer:
+                        per_term_df.to_excel(writer, index=False, sheet_name='Annotations')
+                        
+                        # Get workbook and worksheet
+                        workbook = writer.book
+                        worksheet = writer.sheets['Annotations']
+                        
+                        # Format header
+                        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+                        header_font = Font(bold=True, color="FFFFFF")
+                        
+                        for cell in worksheet[1]:
+                            cell.fill = header_fill
+                            cell.font = header_font
+                            cell.alignment = Alignment(horizontal='center')
+                        
+                        # Adjust column widths
+                        worksheet.column_dimensions['A'].width = 25  # gene
+                        worksheet.column_dimensions['B'].width = 15  # term_type
+                        worksheet.column_dimensions['C'].width = 30  # term
+                    
+                    print(f"✓ Created: {output_file_per_term} ({len(per_term_df)} rows)")
         else:
             print("No EggNOG v7 annotation files found")
     
@@ -666,14 +970,41 @@ def process_fantasia(results_dir: str, output_dir: str):
         # Process each model separately
         for model_suffix in models:
             model_name = FantasiaParser.MODEL_NAMES.get(model_suffix, model_suffix)
-            output_file = os.path.join(output_dir, f"{basename}_fantasia_{model_name}_annotations.xlsx")
             
             parser = FantasiaParser(tsv_file, model_suffix=model_suffix)
             parser.parse()
             
             # Only save if there are results for this model
             if parser.results:
-                parser.save_to_excel(output_file)
+                # Save per-term output (1 row = 1 GO term)
+                output_file_per_term = os.path.join(output_dir, f"{basename}_fantasia_{model_name}_per_term.xlsx")
+                parser.save_to_excel(output_file_per_term)
+                
+                # Save per-gene output (1 row = 1 gene with grouped GO terms)
+                per_gene_df = parser.create_per_gene_output()
+                if not per_gene_df.empty:
+                    output_file_per_gene = os.path.join(output_dir, f"{basename}_fantasia_{model_name}_per_gene.xlsx")
+                    with pd.ExcelWriter(output_file_per_gene, engine='openpyxl') as writer:
+                        per_gene_df.to_excel(writer, index=False, sheet_name='Annotations')
+                        
+                        # Get workbook and worksheet
+                        workbook = writer.book
+                        worksheet = writer.sheets['Annotations']
+                        
+                        # Format header
+                        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+                        header_font = Font(bold=True, color="FFFFFF")
+                        
+                        for cell in worksheet[1]:
+                            cell.fill = header_fill
+                            cell.font = header_font
+                            cell.alignment = Alignment(horizontal='center')
+                        
+                        # Adjust column widths
+                        worksheet.column_dimensions['A'].width = 25  # gene
+                        worksheet.column_dimensions['B'].width = 80  # GO (grouped)
+                    
+                    print(f"✓ Created: {output_file_per_gene} ({len(per_gene_df)} rows)")
             else:
                 print(f"  Skipping {model_name}: No annotations found")
 
