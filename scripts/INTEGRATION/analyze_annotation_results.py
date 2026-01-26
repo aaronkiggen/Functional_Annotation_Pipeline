@@ -24,14 +24,11 @@ Repository: aaronkiggen/Functional_Annotation_Pipeline
 import argparse
 import os
 import sys
-from pathlib import Path
-from typing import Dict, Set, List, Tuple
+from typing import Dict, Set, Tuple
 
 try:
     import pandas as pd
     import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
-    from matplotlib.gridspec import GridSpec
 except ImportError:
     print("Error: Required packages not found.")
     print("Please install: pip install pandas matplotlib openpyxl")
@@ -285,7 +282,7 @@ def plot_annotation_pie_charts(summary_df: pd.DataFrame, output_path: str):
     fig = plt.figure(figsize=(15, 5 * n_rows))
     
     for idx, row in summary_df.iterrows():
-        ax = plt.subplot(n_rows, n_cols, idx + 1)
+        ax = fig.add_subplot(n_rows, n_cols, idx + 1)
         
         annotated = row['Annotated Genes']
         total = row['Total Genes']
@@ -579,8 +576,12 @@ Examples:
     
     # Save summary to CSV
     summary_csv = os.path.join(args.output_dir, f"{args.sample}_annotation_summary.csv")
-    summary_df.to_csv(summary_csv, index=False)
-    print(f"✓ Saved summary: {summary_csv}")
+    try:
+        summary_df.to_csv(summary_csv, index=False)
+        print(f"✓ Saved summary: {summary_csv}")
+    except (IOError, OSError) as e:
+        print(f"Error: Failed to save summary CSV: {e}")
+        sys.exit(1)
     
     # Display summary
     print("\nAnnotation Summary:")
