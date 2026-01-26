@@ -155,7 +155,17 @@ wget https://a3s.fi/eggnog7_annotator/test.fa.md5
 echo "  - Verifying checksum..."
 md5sum -c test.fa.md5
 
+EGGNOG_DB_V7="${DB_ROOT}/eggnog7"
+
+mkdir -p {DB_ROOT}/eggnog7/diamond
+cd {DB_ROOT}/eggnog7/diamond
+
+wget https://github.com/bbuchfink/diamond/releases/download/v2.1.16/diamond-linux64.tar.gz
+tar -xzf diamond-linux64.tar.gz
+./diamond version
+
 echo "✓ EggNOG v7 database download complete!"
+
 
 ################################################################################
 # 4. OrthoFinder Environment
