@@ -53,7 +53,7 @@ Please refer to the scripts located in the `installation/` directory to set up t
 
 ```bash
 cd installation/
-# See the scripts: environments_and_databases, interproscan, FANTASIA, eggnog7_annotator, and download_eggnog_data.py
+# See the scripts: environments_and_databases, interproscan, FANTASIA, and download_eggnog_data.py
 ```
 
 For detailed installation instructions for each tool, see the respective readthedocs of the tools used. 
