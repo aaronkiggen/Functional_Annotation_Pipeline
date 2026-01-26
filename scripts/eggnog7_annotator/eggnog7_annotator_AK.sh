@@ -17,7 +17,9 @@ OUTDIR="."
 KEEP_DIAMOND=0
 VERSION="0.1"
 
-DIAMOND_BIN="/lustre1/scratch/354/vsc35429/eggnog7/diamond/diamond"
+# Default to DB_ROOT from environment, or use HOME/databases if not set
+DB_ROOT="${DB_ROOT:-${HOME}/databases}"
+DIAMOND_BIN="${DB_ROOT}/eggnog7/diamond/diamond"
 
 
 ############################################

@@ -157,8 +157,8 @@ md5sum -c test.fa.md5
 
 EGGNOG_DB_V7="${DB_ROOT}/eggnog7"
 
-mkdir -p {DB_ROOT}/eggnog7/diamond
-cd {DB_ROOT}/eggnog7/diamond
+mkdir -p ${DB_ROOT}/eggnog7/diamond
+cd ${DB_ROOT}/eggnog7/diamond
 
 wget https://github.com/bbuchfink/diamond/releases/download/v2.1.16/diamond-linux64.tar.gz
 tar -xzf diamond-linux64.tar.gz
