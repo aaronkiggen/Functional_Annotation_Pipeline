@@ -6,14 +6,48 @@ This directory contains scripts for integrating and formatting outputs from the 
 
 ### create_excel_outputs.py
 
-A Python script that parses output files from functional annotation tools and generates Excel files with standardized format.
+A Python script that parses output files from functional annotation tools and generates Excel files with standardized format. For each tool, the script generates two types of outputs:
 
-#### Output Format
+1. **Per-term output**: One row per functional term (GO or KEGG)
+2. **Per-gene output**: One row per gene with functional terms grouped together in one cell
 
-Each Excel file contains three columns:
-- **gene_name**: The identifier of the gene/protein
-- **functional_term**: GO term or KEGG ortholog identifier
-- **extra_information**: Additional details from the tool (e.g., protein name, scores, E-values)
+#### Output Formats by Tool
+
+##### KofamScan
+- **Per-term output** (`*_kofamscan_per_term.xlsx`):
+  - Columns: `gene_name`, `KEGG`
+  - One row per KEGG term (or gene without KEGG term)
+- **Per-gene output** (`*_kofamscan_per_gene.xlsx`):
+  - Columns: `gene_name`, `KEGG`
+  - One row per gene with KEGG terms grouped (comma-separated)
+
+##### InterProScan
+- **Per-term output** (`*_interproscan_per_term.xlsx`):
+  - Columns: `gene`, `analysis`, `score`, `InterPro_accession`, `InterPro_description`, `GO`, `Pathways`
+  - One row per hit in the database
+- **Per-gene output** (`*_interproscan_per_gene.xlsx`):
+  - Columns: `gene`, `GO`, `Pathways`
+  - One row per gene with GO terms and pathways grouped
+
+##### EggNOG-mapper
+- **Per-gene output** (`*_eggnog_v[5|7]_per_gene.xlsx`):
+  - Columns: `gene`, `Description`, `GOs`, `KEGG_ko`, `KEGG_Pathway`, `KEGG_Reaction`, `KEGG_rclass`, `PFAM`
+  - One row per gene (already the desired format)
+- **Per-term output** (`*_eggnog_v[5|7]_per_term.xlsx`):
+  - Columns: `gene`, `term_type`, `term`
+  - One row per GO or KEGG term
+
+##### FANTASIA
+- **Per-term output** (`*_fantasia_{model}_per_term.xlsx`):
+  - Columns: `gene`, `GO`, `term_count`, `final_score`
+  - One row per GO term
+  - Separate file for each model (ESM-2, ProtT5, ProstT5, Ankh3-Large, ESM3c)
+- **Per-gene output** (`*_fantasia_{model}_per_gene.xlsx`):
+  - Columns: `gene`, `GO`
+  - One row per gene with GO terms grouped (comma-separated)
+  - Separate file for each model
+
+**Note**: OrthoFinder outputs are excluded as per requirements.
 
 #### Supported Tools
 
@@ -22,26 +56,20 @@ The script processes outputs from:
 1. **KofamScan** - KEGG Orthology annotation
    - Input: `*_kofam_mapper.tsv` files
    - Functional terms: KEGG KO identifiers (e.g., K00001)
-   - Extra information: Score, E-value, Threshold
 
 2. **InterProScan** - Domain and motif analysis
    - Input: `*.tsv` files
-   - Functional terms: GO terms and domain accessions
-   - Extra information: Domain descriptions, InterPro IDs
+   - Functional terms: GO terms and pathways
 
 3. **EggNOG-mapper** - Orthology and functional annotation
    - Input: `.emapper.annotations` files (v5) and `.eggnog.tsv.gz` files (v7)
    - Functional terms: GO terms and KEGG KO identifiers
-   - Extra information: Protein descriptions, best hits, E-values
+   - Note: Properly handles comment lines (including first 2 rows with ##)
 
 4. **FANTASIA** - AI-driven functional annotation
    - Input: `*.tsv` files from FANTASIA output directory
    - Functional terms: GO terms
-   - Extra information: Final scores per model, similar proteins
    - Output: One Excel file per model (ESM-2, ProtT5, ProstT5, Ankh3-Large, ESM3c)
-   - Columns: gene_name, GO, final_score, proteins
-
-**Note**: OrthoFinder outputs are excluded as per requirements.
 
 #### Installation
 
@@ -103,7 +131,7 @@ python create_excel_outputs.py --fantasia-only
 ```
 usage: create_excel_outputs.py [-h] [-r RESULTS_DIR] [-o OUTPUT_DIR]
                                 [--kofamscan-only] [--interproscan-only]
-                                [--eggnog-only]
+                                [--eggnog-only] [--fantasia-only]
 
 Generate Excel files from functional annotation outputs
 
@@ -121,37 +149,55 @@ optional arguments:
 
 #### Output Files
 
-The script generates one Excel file per input sample and tool:
+The script generates two Excel files per input sample and tool (per-term and per-gene):
 
-- `{sample}_kofamscan_annotations.xlsx` - KofamScan results
-- `{sample}_interproscan_annotations.xlsx` - InterProScan results
-- `{sample}_eggnog_v5_annotations.xlsx` - EggNOG v5 results
-- `{sample}_eggnog_v7_annotations.xlsx` - EggNOG v7 results
-- `{sample}_fantasia_ESM-2_annotations.xlsx` - FANTASIA ESM-2 model results
-- `{sample}_fantasia_ProtT5_annotations.xlsx` - FANTASIA ProtT5 model results
-- `{sample}_fantasia_ProstT5_annotations.xlsx` - FANTASIA ProstT5 model results
-- `{sample}_fantasia_Ankh3-Large_annotations.xlsx` - FANTASIA Ankh3-Large model results
-- `{sample}_fantasia_ESM3c_annotations.xlsx` - FANTASIA ESM3c model results
+**KofamScan:**
+- `{sample}_kofamscan_per_term.xlsx` - One row per KEGG term
+- `{sample}_kofamscan_per_gene.xlsx` - One row per gene with grouped KEGG
+
+**InterProScan:**
+- `{sample}_interproscan_per_term.xlsx` - One row per hit
+- `{sample}_interproscan_per_gene.xlsx` - One row per gene with grouped GO/Pathways
+
+**EggNOG-mapper:**
+- `{sample}_eggnog_v5_per_gene.xlsx` - One row per gene (v5)
+- `{sample}_eggnog_v5_per_term.xlsx` - One row per GO/KEGG term (v5)
+- `{sample}_eggnog_v7_per_gene.xlsx` - One row per gene (v7)
+- `{sample}_eggnog_v7_per_term.xlsx` - One row per GO/KEGG term (v7)
+
+**FANTASIA:**
+- `{sample}_fantasia_{model}_per_term.xlsx` - One row per GO term (per model)
+- `{sample}_fantasia_{model}_per_gene.xlsx` - One row per gene with grouped GO (per model)
 
 Each Excel file includes:
 - Formatted headers (blue background, white text)
 - Auto-sized columns for readability
 - All annotations for the sample
 
-#### Example Output
+#### Example Outputs
 
-| gene_name | functional_term | extra_information |
-|-----------|----------------|-------------------|
-| gene001.t1 | K00001 | Score: 150.2, E-value: 1.2e-45, Threshold: 100.00 |
-| gene001.t1 | GO:0005515 | Domain: Zinc finger (PF00001); InterPro: Zinc finger domain (IPR000001) |
-| gene002.t1 | K00002 | Description: Protein kinase; Best hit: 12345.XP_001; E-value: 1e-100 |
+**KofamScan Per-Term:**
+| gene_name | KEGG |
+|-----------|------|
+| KAK4002030.1 | |
+| KAK4001898.1 | K20050 |
+| KAK4001899.1 | K16759 |
 
-For FANTASIA results (one file per model):
+**InterProScan Per-Term:**
+| gene | analysis | score | InterPro_accession | InterPro_description | GO | Pathways |
+|------|----------|-------|-------------------|---------------------|-----|----------|
+| P51587 | Pfam | 3.1E-52 | IPR002093 | BRCA2 repeat | GO:0005515\|GO:0006302 | REACT_71 |
 
-| gene_name | GO | final_score | proteins |
-|-----------|-------|-------------|----------|
-| KAK4001893.1 | GO:0000281 | 0.5404 | TALAN_HUMAN |
-| KAK4001894.1 | GO:0003676 | 0.5876 | DDX5_HUMAN;RBM3_MOUSE |
+**EggNOG Per-Gene:**
+| gene | Description | GOs | KEGG_ko | KEGG_Pathway | KEGG_Reaction | KEGG_rclass | PFAM |
+|------|-------------|-----|---------|--------------|---------------|-------------|------|
+| KAK4001897.1 | Belongs to the ubiquitin-conjugating enzyme family | GO:0000151,GO:0003674,... | ko:K00001,ko:K00002 | map00010,map00020 | R00001 | RC00001 | F-box-like,UQ_con |
+
+**FANTASIA Per-Term:**
+| gene | GO | term_count | final_score |
+|------|-----|-----------|-------------|
+| KAK4001897.1 | GO:0000151 | 5 | 0.85 |
+| KAK4001897.1 | GO:0003674 | 3 | 0.80 |
 
 #### Integration with Pipeline
 
