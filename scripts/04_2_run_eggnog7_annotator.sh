@@ -46,6 +46,9 @@ echo ""
 mkdir -p "${EGGNOG_OUTPUT}"
 mkdir -p "${LOG_DIR}"
 
+# EggNOG 7 annotator script location
+EGGNOG7_SCRIPT="${SCRIPT_DIR}/eggnog7_annotator/eggnog7_annotator_AK.sh"
+
 # Check if annotation script exists
 if [ ! -f "${EGGNOG7_SCRIPT}" ]; then
     echo "ERROR: EggNOG 7 annotation script not found: ${EGGNOG7_SCRIPT}"
@@ -73,8 +76,14 @@ echo "✓ Master table: ${EGGNOG_MASTER_TABLE}"
 echo ""
 
 # Add eggnog7_annotator to PATH
-export PATH="${SCRIPT_DIR}/eggnog7_annotator:$PATH"
-echo "✓ Added eggnog7_annotator to PATH"
+ANNOTATOR_DIR="${SCRIPT_DIR}/eggnog7_annotator"
+if [ -d "${ANNOTATOR_DIR}" ]; then
+    export PATH="${ANNOTATOR_DIR}:$PATH"
+    echo "✓ Added eggnog7_annotator to PATH: ${ANNOTATOR_DIR}"
+else
+    echo "ERROR: eggnog7_annotator directory not found: ${ANNOTATOR_DIR}"
+    exit 1
+fi
 echo ""
 
 # Load Diamond module
