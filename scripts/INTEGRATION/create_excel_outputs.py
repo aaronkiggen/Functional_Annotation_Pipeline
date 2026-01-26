@@ -4,8 +4,27 @@ Functional Annotation Pipeline - Excel Output Generator
 
 Description:
     This script parses output files from functional annotation tools
-    (KofamScan, InterProScan, and EggNOG-mapper) and generates Excel
-    files with standardized format: gene_name | functional_term | extra_information
+    (KofamScan, InterProScan, EggNOG-mapper, and FANTASIA) and generates Excel
+    files with standardized format. For each tool, the script generates two types of outputs:
+    
+    1. Per-term output: One row per functional term (GO or KEGG)
+    2. Per-gene output: One row per gene with functional terms grouped together
+    
+    KofamScan:
+        - Per-term: gene_name, KEGG
+        - Per-gene: gene_name, KEGG (grouped)
+    
+    InterProScan:
+        - Per-term: gene, analysis, score, InterPro_accession, InterPro_description, GO, Pathways
+        - Per-gene: gene, GO (grouped), Pathways (grouped)
+    
+    EggNOG-mapper:
+        - Per-term: gene, term_type, term
+        - Per-gene: gene, Description, GOs, KEGG_ko, KEGG_Pathway, KEGG_Reaction, KEGG_rclass, PFAM
+    
+    FANTASIA:
+        - Per-term: gene, GO, term_count, final_score (separate file per model)
+        - Per-gene: gene, GO (grouped) (separate file per model)
 
 Author: Aaron Kiggen
 Repository: aaronkiggen/Functional_Annotation_Pipeline
@@ -311,14 +330,14 @@ class EggNOGParser(AnnotationParser):
             for line in f:
                 # Skip comment lines (including the first 2 rows with ##)
                 if line.startswith('#'):
-                    # Find header line (starts with #query or #)
-                    if line.startswith('#query') or (not line.startswith('##') and header_line is None):
+                    # Find header line (starts with #query)
+                    if line.startswith('#query'):
                         header_line = line.strip().lstrip('#').split('\t')
                     continue
                 
                 parts = line.strip().split('\t')
                 
-                if not header_line or len(parts) < len(header_line):
+                if not header_line or len(parts) != len(header_line):
                     continue
                 
                 # Create dictionary from header and values
@@ -448,14 +467,14 @@ class EggNOG7Parser(AnnotationParser):
             for line in f:
                 # Skip comment lines
                 if line.startswith('#'):
-                    # Find header line
-                    if line.startswith('#query') or (not line.startswith('##') and header_line is None):
+                    # Find header line (starts with #query)
+                    if line.startswith('#query'):
                         header_line = line.strip().lstrip('#').split('\t')
                     continue
                 
                 parts = line.strip().split('\t')
                 
-                if not header_line or len(parts) < len(header_line):
+                if not header_line or len(parts) != len(header_line):
                     continue
                 
                 # Create dictionary from header and values
