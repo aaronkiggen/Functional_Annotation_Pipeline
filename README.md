@@ -11,7 +11,7 @@ This pipeline performs annotation in 6 distinct stages. Each stage is independen
 | **01** | **Python/Biopython** | Extraction of longest isoforms/primary transcripts |
 | **02** | **KofamScan** | KEGG Orthology annotation using HMM profiles |
 | **03** | **InterProScan** | Domain and motif classification (Pfam, SUPERFAMILY, etc.) |
-| **04** | **EggNOG-mapper** | Orthology prediction and functional annotation |
+| **04** | **EggNOG-mapper / [eggnog7_annotator](https://github.com/fischuu/eggnog7_annotator)** | Orthology prediction and functional annotation (v5 and v7) |
 | **05** | **OrthoFinder** | Phylogenetic orthology inference |
 | **06** | **FANTASIA** | AI-driven functional annotation (GPU accelerated) |
 | **07** | **INTEGRATION** | functional annotation integration and generation of output files |
@@ -180,6 +180,7 @@ If you use this pipeline in your research, please cite the relevant tools:
 - **KofamScan**:  Aramaki et al. (2020) *Bioinformatics* 36(7):2251-2252
 - **InterProScan**: Jones et al. (2014) *Bioinformatics* 30(9):1236-1240
 - **EggNOG-mapper**: Huerta-Cepas et al. (2019) *Mol Biol Evol* 36(10):2226-2229
+- **eggnog7_annotator**: [fischuu/eggnog7_annotator](https://github.com/fischuu/eggnog7_annotator) - EggNOG v7 annotation tool
 - **OrthoFinder**: Emms & Kelly (2019) *Genome Biology* 20:238
 - **FANTASIA**:  [Add citation when available]
 
