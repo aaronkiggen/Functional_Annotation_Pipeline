@@ -13,6 +13,11 @@ Description:
     - Separate GO/KEGG counts for EggNOG
     - Pre- and post-filtering analysis for FANTASIA
     - Generate pie charts showing annotation percentages
+    - Generate bar charts comparing tool performance
+    - Create Venn diagrams showing 2-way and 3-way tool overlaps
+    - Generate UpSet plots for comprehensive multi-tool overlap visualization
+    - Create heatmaps showing annotation density patterns
+    - Generate stacked bar charts for GO vs KEGG annotation breakdown
     - Compare gene annotations across tools
     - Calculate overlaps between KofamScan, InterProScan, and EggNOG
     - Identify genes uniquely annotated by FANTASIA
@@ -29,9 +34,35 @@ from typing import Dict, Set, Tuple
 try:
     import pandas as pd
     import matplotlib.pyplot as plt
-except ImportError:
+    import numpy as np
+    from matplotlib_venn import venn2, venn3, venn2_circles, venn3_circles
+    import seaborn as sns
+    from upsetplot import UpSet, from_memberships
+except ImportError as e:
+    missing_packages = []
+    try:
+        import pandas as pd
+    except ImportError:
+        missing_packages.append("pandas")
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        missing_packages.append("matplotlib")
+    try:
+        from matplotlib_venn import venn2, venn3
+    except ImportError:
+        missing_packages.append("matplotlib-venn")
+    try:
+        import seaborn as sns
+    except ImportError:
+        missing_packages.append("seaborn")
+    try:
+        from upsetplot import UpSet
+    except ImportError:
+        missing_packages.append("upsetplot")
+    
     print("Error: Required packages not found.")
-    print("Please install: pip install pandas matplotlib openpyxl")
+    print(f"Please install: pip install {' '.join(missing_packages)} openpyxl")
     sys.exit(1)
 
 
@@ -429,6 +460,262 @@ def create_venn_style_summary(overlaps: Dict, output_path: str):
     print(f"✓ Saved overlap summary: {output_path}")
 
 
+def plot_venn_diagrams(gene_sets: Dict[str, Set[str]], output_path: str):
+    """
+    Create Venn diagrams showing overlaps between annotation tools.
+    
+    Args:
+        gene_sets: Dictionary mapping tool names to sets of annotated genes
+        output_path: Path to save the figure
+    """
+    # Create figure with multiple Venn diagrams
+    fig = plt.figure(figsize=(18, 6))
+    
+    # Venn diagram 1: KofamScan vs InterProScan vs EggNOG
+    if 'KofamScan' in gene_sets and 'InterProScan' in gene_sets and 'EggNOG (combined)' in gene_sets:
+        ax1 = fig.add_subplot(1, 3, 1)
+        venn3([gene_sets['KofamScan'], gene_sets['InterProScan'], gene_sets['EggNOG (combined)']], 
+              set_labels=('KofamScan', 'InterProScan', 'EggNOG'),
+              ax=ax1)
+        ax1.set_title('Tool Overlap: KofamScan, InterProScan & EggNOG', fontweight='bold', fontsize=12)
+    
+    # Venn diagram 2: KofamScan vs InterProScan (2-way)
+    if 'KofamScan' in gene_sets and 'InterProScan' in gene_sets:
+        ax2 = fig.add_subplot(1, 3, 2)
+        venn2([gene_sets['KofamScan'], gene_sets['InterProScan']], 
+              set_labels=('KofamScan', 'InterProScan'),
+              ax=ax2)
+        ax2.set_title('Tool Overlap: KofamScan & InterProScan', fontweight='bold', fontsize=12)
+    
+    # Venn diagram 3: Traditional tools vs FANTASIA
+    if 'FANTASIA (post-filtering)' in gene_sets:
+        traditional_tools = set()
+        if 'KofamScan' in gene_sets:
+            traditional_tools.update(gene_sets['KofamScan'])
+        if 'InterProScan' in gene_sets:
+            traditional_tools.update(gene_sets['InterProScan'])
+        if 'EggNOG (combined)' in gene_sets:
+            traditional_tools.update(gene_sets['EggNOG (combined)'])
+        
+        if traditional_tools:
+            ax3 = fig.add_subplot(1, 3, 3)
+            venn2([traditional_tools, gene_sets['FANTASIA (post-filtering)']], 
+                  set_labels=('Traditional Tools', 'FANTASIA'),
+                  ax=ax3)
+            ax3.set_title('Traditional Tools vs FANTASIA', fontweight='bold', fontsize=12)
+    
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✓ Saved Venn diagrams: {output_path}")
+    plt.close()
+
+
+def plot_upset_diagram(gene_sets: Dict[str, Set[str]], total_genes_set: Set[str], output_path: str):
+    """
+    Create UpSet plot showing comprehensive multi-tool overlaps.
+    
+    Args:
+        gene_sets: Dictionary mapping tool names to sets of annotated genes
+        total_genes_set: Set of all genes in the dataset
+        output_path: Path to save the figure
+    """
+    # Prepare data for UpSet plot - only include main tools
+    main_tools = {}
+    if 'KofamScan' in gene_sets:
+        main_tools['KofamScan'] = gene_sets['KofamScan']
+    if 'InterProScan' in gene_sets:
+        main_tools['InterProScan'] = gene_sets['InterProScan']
+    if 'EggNOG (combined)' in gene_sets:
+        main_tools['EggNOG'] = gene_sets['EggNOG (combined)']
+    if 'FANTASIA (post-filtering)' in gene_sets:
+        main_tools['FANTASIA'] = gene_sets['FANTASIA (post-filtering)']
+    
+    if len(main_tools) < 2:
+        print("⚠ Not enough tools for UpSet plot (need at least 2)")
+        return
+    
+    # Create membership dictionary for each gene
+    memberships = []
+    for gene in total_genes_set:
+        membership = tuple(tool for tool, genes in main_tools.items() if gene in genes)
+        if membership:  # Only include genes annotated by at least one tool
+            memberships.append(membership)
+    
+    # Create UpSet plot
+    if memberships:
+        upset_data = from_memberships(memberships)
+        
+        fig = plt.figure(figsize=(14, 8))
+        upset = UpSet(upset_data, 
+                     subset_size='count',
+                     show_counts=True,
+                     sort_by='cardinality',
+                     element_size=40)
+        upset.plot(fig=fig)
+        plt.suptitle('Multi-Tool Annotation Overlap (UpSet Plot)', 
+                    fontweight='bold', fontsize=14, y=0.98)
+        
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"✓ Saved UpSet plot: {output_path}")
+        plt.close()
+    else:
+        print("⚠ No overlapping annotations found for UpSet plot")
+
+
+def plot_annotation_heatmap(gene_sets: Dict[str, Set[str]], total_genes_set: Set[str], 
+                            output_path: str, max_genes: int = 100):
+    """
+    Create heatmap showing annotation density (which genes are annotated by which tools).
+    
+    Args:
+        gene_sets: Dictionary mapping tool names to sets of annotated genes
+        total_genes_set: Set of all genes in the dataset
+        output_path: Path to save the figure
+        max_genes: Maximum number of genes to display (for readability)
+    """
+    # Select main tools for heatmap
+    main_tools = {}
+    if 'KofamScan' in gene_sets:
+        main_tools['KofamScan'] = gene_sets['KofamScan']
+    if 'InterProScan' in gene_sets:
+        main_tools['InterProScan'] = gene_sets['InterProScan']
+    if 'EggNOG (combined)' in gene_sets:
+        main_tools['EggNOG'] = gene_sets['EggNOG (combined)']
+    if 'FANTASIA (post-filtering)' in gene_sets:
+        main_tools['FANTASIA'] = gene_sets['FANTASIA (post-filtering)']
+    
+    if not main_tools:
+        print("⚠ No tools available for heatmap")
+        return
+    
+    # Get genes that are annotated by at least one tool
+    annotated_genes = set()
+    for genes in main_tools.values():
+        annotated_genes.update(genes)
+    
+    # Sample genes if too many
+    genes_to_plot = sorted(list(annotated_genes))[:max_genes]
+    
+    # Create binary matrix: gene x tool
+    data = []
+    for gene in genes_to_plot:
+        row = [1 if gene in tool_genes else 0 for tool_genes in main_tools.values()]
+        data.append(row)
+    
+    # Create DataFrame
+    df_heatmap = pd.DataFrame(data, 
+                              index=genes_to_plot,
+                              columns=list(main_tools.keys()))
+    
+    # Plot heatmap
+    fig, ax = plt.subplots(figsize=(10, max(8, len(genes_to_plot) * 0.15)))
+    
+    sns.heatmap(df_heatmap, 
+                cmap=['#FFFFFF', '#2196F3'],
+                cbar_kws={'label': 'Annotated', 'ticks': [0, 1]},
+                linewidths=0.5,
+                linecolor='lightgray',
+                ax=ax,
+                yticklabels=True if len(genes_to_plot) <= 50 else False)
+    
+    ax.set_xlabel('Annotation Tool', fontweight='bold', fontsize=12)
+    ax.set_ylabel('Genes', fontweight='bold', fontsize=12)
+    
+    title = f'Annotation Density Heatmap (First {len(genes_to_plot)} Annotated Genes)'
+    ax.set_title(title, fontweight='bold', fontsize=14, pad=20)
+    
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✓ Saved annotation heatmap: {output_path}")
+    plt.close()
+
+
+def plot_annotation_type_breakdown(annotations: Dict, output_path: str):
+    """
+    Create stacked bar chart showing GO vs KEGG annotation breakdown per tool.
+    
+    Args:
+        annotations: Dictionary of annotation statistics
+        output_path: Path to save the figure
+    """
+    # Extract GO and KEGG counts per tool
+    tools_data = {}
+    
+    # KofamScan - only KEGG
+    if 'KofamScan' in annotations:
+        tools_data['KofamScan'] = {
+            'KEGG': annotations['KofamScan'][1],
+            'GO': 0
+        }
+    
+    # InterProScan - has GO (approximate from total)
+    if 'InterProScan' in annotations:
+        tools_data['InterProScan'] = {
+            'GO': annotations['InterProScan'][1],
+            'KEGG': 0
+        }
+    
+    # EggNOG - has both
+    if 'EggNOG' in annotations and isinstance(annotations['EggNOG'], dict):
+        tools_data['EggNOG'] = {
+            'GO': annotations['EggNOG']['GO'][1],
+            'KEGG': annotations['EggNOG']['KEGG'][1]
+        }
+    
+    # FANTASIA - only GO (post-filtering if available)
+    fantasia_post_genes = set()
+    for key in annotations.keys():
+        if 'FANTASIA' in key and '(post)' in key:
+            fantasia_post_genes.update(annotations[key][0])
+    if fantasia_post_genes:
+        tools_data['FANTASIA'] = {
+            'GO': len(fantasia_post_genes),
+            'KEGG': 0
+        }
+    
+    if not tools_data:
+        print("⚠ No data available for annotation type breakdown")
+        return
+    
+    # Prepare data for plotting
+    tools = list(tools_data.keys())
+    go_counts = [tools_data[tool]['GO'] for tool in tools]
+    kegg_counts = [tools_data[tool]['KEGG'] for tool in tools]
+    
+    # Create stacked bar chart
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    x = np.arange(len(tools))
+    width = 0.6
+    
+    p1 = ax.bar(x, go_counts, width, label='GO Terms', color='#4CAF50')
+    p2 = ax.bar(x, kegg_counts, width, bottom=go_counts, label='KEGG Terms', color='#FF9800')
+    
+    ax.set_xlabel('Annotation Tool', fontweight='bold', fontsize=12)
+    ax.set_ylabel('Number of Annotated Genes', fontweight='bold', fontsize=12)
+    ax.set_title('Annotation Type Breakdown by Tool', fontweight='bold', fontsize=14)
+    ax.set_xticks(x)
+    ax.set_xticklabels(tools)
+    ax.legend(loc='upper right')
+    ax.grid(axis='y', alpha=0.3)
+    
+    # Add value labels
+    for i, tool in enumerate(tools):
+        total = go_counts[i] + kegg_counts[i]
+        if go_counts[i] > 0:
+            ax.text(i, go_counts[i]/2, f'{go_counts[i]}', 
+                   ha='center', va='center', fontweight='bold', color='white')
+        if kegg_counts[i] > 0:
+            ax.text(i, go_counts[i] + kegg_counts[i]/2, f'{kegg_counts[i]}', 
+                   ha='center', va='center', fontweight='bold', color='white')
+        ax.text(i, total, f'{total}', ha='center', va='bottom', fontweight='bold')
+    
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✓ Saved annotation type breakdown: {output_path}")
+    plt.close()
+
+
 def main():
     """Main function to parse arguments and run analysis"""
     parser = argparse.ArgumentParser(
@@ -600,6 +887,34 @@ Examples:
     comparison_path = os.path.join(args.output_dir, f"{args.sample}_annotation_comparison.png")
     plot_combined_comparison(summary_df, comparison_path)
     
+    # Venn diagrams
+    venn_path = os.path.join(args.output_dir, f"{args.sample}_venn_diagrams.png")
+    try:
+        plot_venn_diagrams(gene_sets, venn_path)
+    except Exception as e:
+        print(f"⚠ Could not create Venn diagrams: {e}")
+    
+    # UpSet plot
+    upset_path = os.path.join(args.output_dir, f"{args.sample}_upset_plot.png")
+    try:
+        plot_upset_diagram(gene_sets, total_genes_set, upset_path)
+    except Exception as e:
+        print(f"⚠ Could not create UpSet plot: {e}")
+    
+    # Annotation heatmap
+    heatmap_path = os.path.join(args.output_dir, f"{args.sample}_annotation_heatmap.png")
+    try:
+        plot_annotation_heatmap(gene_sets, total_genes_set, heatmap_path)
+    except Exception as e:
+        print(f"⚠ Could not create annotation heatmap: {e}")
+    
+    # Annotation type breakdown (GO vs KEGG)
+    breakdown_path = os.path.join(args.output_dir, f"{args.sample}_annotation_type_breakdown.png")
+    try:
+        plot_annotation_type_breakdown(annotations, breakdown_path)
+    except Exception as e:
+        print(f"⚠ Could not create annotation type breakdown: {e}")
+    
     # Step 5: Calculate overlaps
     print("\n" + "="*60)
     print("Step 5: Calculating Tool Overlaps")
@@ -624,6 +939,10 @@ Examples:
     print(f"  - {args.sample}_annotation_summary.csv")
     print(f"  - {args.sample}_annotation_pie_charts.png")
     print(f"  - {args.sample}_annotation_comparison.png")
+    print(f"  - {args.sample}_venn_diagrams.png")
+    print(f"  - {args.sample}_upset_plot.png")
+    print(f"  - {args.sample}_annotation_heatmap.png")
+    print(f"  - {args.sample}_annotation_type_breakdown.png")
     print(f"  - {args.sample}_overlap_summary.txt")
 
 
