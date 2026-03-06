@@ -58,6 +58,18 @@ A Python script that parses output files from functional annotation tools and ge
   - One row per gene with GO terms grouped (comma-separated)
   - Separate file for each model
 
+##### Combined Outputs (Cross-Tool)
+
+After processing individual tools, the script combines per-gene annotations from multiple
+tools into unified Excel files with separate `GO` and `KEGG` columns (duplicates removed):
+
+- **KofamScan + InterProScan + EggNOG v7** (`*_combined_kofam_interpro_eggnogv7_per_gene.xlsx`):
+  - Columns: `gene`, `GO`, `KEGG`
+  - One row per gene with deduplicated GO and KEGG terms from these three tools
+- **KofamScan + InterProScan + EggNOG v7 + FANTASIA ProtT5** (`*_combined_kofam_interpro_eggnogv7_fantasia_ProtT5_per_gene.xlsx`):
+  - Columns: `gene`, `GO`, `KEGG`
+  - Same as above, with additional GO terms from FANTASIA's ProtT5 model
+
 **Note**: OrthoFinder outputs are excluded as per requirements.
 
 #### Supported Tools
@@ -135,6 +147,9 @@ python create_excel_outputs.py --eggnog-only
 
 # FANTASIA only
 python create_excel_outputs.py --fantasia-only
+
+# Only combine existing per-gene files (skip individual tool processing)
+python create_excel_outputs.py --combine-only -o ./excel_outputs
 ```
 
 #### Command-Line Options
@@ -143,6 +158,7 @@ python create_excel_outputs.py --fantasia-only
 usage: create_excel_outputs.py [-h] [-r RESULTS_DIR] [-o OUTPUT_DIR]
                                 [--kofamscan-only] [--interproscan-only]
                                 [--eggnog-only] [--fantasia-only]
+                                [--combine-only]
 
 Generate Excel files from functional annotation outputs
 
@@ -156,6 +172,7 @@ optional arguments:
   --interproscan-only   Process only InterProScan results
   --eggnog-only         Process only EggNOG-mapper results
   --fantasia-only       Process only FANTASIA results
+  --combine-only        Only combine existing per-gene Excel files (skip individual tool processing)
 ```
 
 #### Output Files
@@ -179,6 +196,10 @@ The script generates two Excel files per input sample and tool (per-term and per
 **FANTASIA:**
 - `{sample}_fantasia_{model}_per_term.xlsx` - One row per GO term (per model)
 - `{sample}_fantasia_{model}_per_gene.xlsx` - One row per gene with grouped GO (per model)
+
+**Combined (Cross-Tool):**
+- `{sample}_combined_kofam_interpro_eggnogv7_per_gene.xlsx` - Per gene with deduplicated GO and KEGG from KofamScan, InterProScan, and EggNOG v7
+- `{sample}_combined_kofam_interpro_eggnogv7_fantasia_ProtT5_per_gene.xlsx` - Same as above plus FANTASIA ProtT5 GO terms
 
 Each Excel file includes:
 - Formatted headers (blue background, white text)
@@ -221,6 +242,18 @@ Each Excel file includes:
 |------|-----|-----------|-------------|
 | KAK4001897.1 | GO:0000151 | 5 | 0.85 |
 | KAK4001897.1 | GO:0003674 | 3 | 0.80 |
+
+**Combined KofamScan + InterProScan + EggNOG v7 Per-Gene:**
+| gene | GO | KEGG |
+|------|-----|------|
+| KAK4001894.1 | GO:0005515, GO:0030154, GO:0048856 | K00001, K25226 |
+| KAK4001897.1 | GO:0000151, GO:0003674 | K00002 |
+
+**Combined KofamScan + InterProScan + EggNOG v7 + FANTASIA ProtT5 Per-Gene:**
+| gene | GO | KEGG |
+|------|-----|------|
+| KAK4001894.1 | GO:0005515, GO:0030154, GO:0048856, GO:0099999 | K00001, K25226 |
+| KAK4001897.1 | GO:0000151, GO:0003674, GO:0050789 | K00002 |
 
 #### Integration with Pipeline
 
