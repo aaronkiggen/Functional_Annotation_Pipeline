@@ -70,6 +70,27 @@ tools into unified Excel files with separate `GO` and `KEGG` columns (duplicates
   - Columns: `gene`, `GO`, `KEGG`
   - Same as above, with additional GO terms from FANTASIA's ProtT5 model
 
+##### topGO Gene-to-GO Mapping Files
+
+Alongside the combined Excel files, the script generates tab-separated gene-to-GO mapping
+files suitable for direct use with the R/Bioconductor [`topGO`](https://bioconductor.org/packages/topGO/) package:
+
+- **KofamScan + InterProScan + EggNOG v7** (`*_topGO_gene2go_kofam_interpro_eggnogv7.tsv`)
+- **KofamScan + InterProScan + EggNOG v7 + FANTASIA ProtT5** (`*_topGO_gene2go_kofam_interpro_eggnogv7_fantasia_ProtT5.tsv`)
+
+Each file contains one gene per line in the format:
+
+```
+gene_id<TAB>GO:0001234, GO:0001235, GO:0001236
+```
+
+Only genes with at least one GO term are included.  These files can be loaded in R with:
+
+```r
+library(topGO)
+geneID2GO <- readMappings(file = "sample_topGO_gene2go_kofam_interpro_eggnogv7_fantasia_ProtT5.tsv")
+```
+
 **Note**: OrthoFinder outputs are excluded as per requirements.
 
 #### Supported Tools
@@ -200,6 +221,10 @@ The script generates two Excel files per input sample and tool (per-term and per
 **Combined (Cross-Tool):**
 - `{sample}_combined_kofam_interpro_eggnogv7_per_gene.xlsx` - Per gene with deduplicated GO and KEGG from KofamScan, InterProScan, and EggNOG v7
 - `{sample}_combined_kofam_interpro_eggnogv7_fantasia_ProtT5_per_gene.xlsx` - Same as above plus FANTASIA ProtT5 GO terms
+
+**topGO Gene-to-GO Mapping:**
+- `{sample}_topGO_gene2go_kofam_interpro_eggnogv7.tsv` - Gene-to-GO mapping from KofamScan, InterProScan, and EggNOG v7
+- `{sample}_topGO_gene2go_kofam_interpro_eggnogv7_fantasia_ProtT5.tsv` - Same as above plus FANTASIA ProtT5 GO terms
 
 Each Excel file includes:
 - Formatted headers (blue background, white text)
