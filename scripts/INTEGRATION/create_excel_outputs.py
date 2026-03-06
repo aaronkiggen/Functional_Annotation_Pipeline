@@ -16,6 +16,12 @@ Description:
     3. Combined KofamScan + InterProScan + EggNOG v7: gene, GO, KEGG
     4. Combined KofamScan + InterProScan + EggNOG v7 + FANTASIA ProtT5: gene, GO, KEGG
     
+    Finally, it generates topGO-compatible gene-to-GO mapping files (TSV)
+    that can be read directly by topGO::readMappings() in R:
+    
+    5. KofamScan + InterProScan + EggNOG v7: gene2GO mapping
+    6. KofamScan + InterProScan + EggNOG v7 + FANTASIA ProtT5: gene2GO mapping
+    
     KofamScan:
         - Per-term: gene_name, KEGG
         - Per-gene: gene_name, KEGG (grouped)
@@ -1308,6 +1314,39 @@ def _combine_sample(output_dir: str, sample: str):
         output_dir, f"{sample}_combined_kofam_interpro_eggnogv7_fantasia_ProtT5_per_gene.xlsx"
     )
     _save_combined_excel(df_kief, output_kief, sheet_name='Combined_KIEF')
+
+    # --- Generate topGO gene2GO mapping files ---
+    topgo_kie = os.path.join(
+        output_dir, f"{sample}_topGO_gene2go_kofam_interpro_eggnogv7.tsv"
+    )
+    _save_topgo_mapping(gene_go, topgo_kie)
+
+    topgo_kief = os.path.join(
+        output_dir,
+        f"{sample}_topGO_gene2go_kofam_interpro_eggnogv7_fantasia_ProtT5.tsv",
+    )
+    _save_topgo_mapping(gene_go_f, topgo_kief)
+
+
+def _save_topgo_mapping(gene_go: Dict[str, set], output_file: str):
+    """Write a topGO-compatible gene-to-GO mapping file.
+
+    Format (tab-separated, one gene per line)::
+
+        gene_id\\tGO:0001234, GO:0001235
+
+    Only genes with at least one GO term are included.  This file can be
+    read directly by ``topGO::readMappings()`` in R.
+    """
+    count = 0
+    with open(output_file, 'w') as fh:
+        for gene in sorted(gene_go.keys()):
+            terms = sorted(gene_go[gene])
+            if not terms:
+                continue
+            fh.write(f"{gene}\t{', '.join(terms)}\n")
+            count += 1
+    print(f"✓ Created: {output_file} ({count} genes with GO terms)")
 
 
 def main():
