@@ -10,6 +10,12 @@ Description:
     1. Per-term output: One row per functional term (GO or KEGG)
     2. Per-gene output: One row per gene with functional terms grouped together
     
+    Additionally, the script combines annotations across tools into unified
+    per-gene Excel files with separate GO and KEGG columns (duplicates removed):
+    
+    3. Combined KofamScan + InterProScan + EggNOG v7: gene, GO, KEGG
+    4. Combined KofamScan + InterProScan + EggNOG v7 + FANTASIA ProtT5: gene, GO, KEGG
+    
     KofamScan:
         - Per-term: gene_name, KEGG
         - Per-gene: gene_name, KEGG (grouped)
@@ -1092,6 +1098,218 @@ def process_fantasia(results_dir: str, output_dir: str):
                 print(f"  Skipping {model_name}: No annotations found")
 
 
+def _save_combined_excel(df: pd.DataFrame, output_file: str, sheet_name: str = 'Combined'):
+    """Save a combined DataFrame to a formatted Excel file"""
+    if df.empty:
+        print(f"Warning: No data to write for {output_file}")
+        return
+
+    with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name=sheet_name)
+
+        workbook = writer.book
+        worksheet = writer.sheets[sheet_name]
+
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+
+        for cell in worksheet[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center')
+
+        worksheet.column_dimensions['A'].width = 25   # gene
+        worksheet.column_dimensions['B'].width = 80   # GO
+        worksheet.column_dimensions['C'].width = 60   # KEGG
+
+    print(f"✓ Created: {output_file} ({len(df)} rows)")
+
+
+def _extract_terms(value: str, separator: str = ',', strip_scores: bool = False) -> set:
+    """Extract unique terms from a delimited string.
+
+    Args:
+        value: Raw cell value (may be NaN or empty).
+        separator: Delimiter between terms (',' or ';').
+        strip_scores: If True, strip '|score' suffixes (EggNOG v7 format).
+
+    Returns:
+        A set of cleaned, non-empty term strings.
+    """
+    if not value or str(value).strip() == '' or str(value) == 'nan':
+        return set()
+    terms = set()
+    for item in str(value).split(separator):
+        item = item.strip()
+        if strip_scores and '|' in item:
+            item = item.split('|', 1)[0].strip()
+        # Remove ko: prefix for KEGG terms
+        if item.startswith('ko:'):
+            item = item[3:]
+        if item:
+            terms.add(item)
+    return terms
+
+
+def _detect_samples(output_dir: str) -> List[str]:
+    """Detect sample names from existing per-gene Excel files in the output directory."""
+    samples = set()
+    suffixes = [
+        '_kofamscan_per_gene.xlsx',
+        '_interproscan_per_gene.xlsx',
+        '_eggnog_v7_per_gene.xlsx',
+    ]
+    for fname in os.listdir(output_dir):
+        for suffix in suffixes:
+            if fname.endswith(suffix):
+                sample = fname[:-len(suffix)]
+                if sample:
+                    samples.add(sample)
+    return sorted(samples)
+
+
+def combine_annotations(output_dir: str):
+    """Combine per-gene annotations from multiple tools into unified Excel files.
+
+    For each detected sample, produces two Excel files with columns
+    ``gene``, ``GO``, ``KEGG`` (duplicates removed):
+
+    1. ``{sample}_combined_kofam_interpro_eggnogv7_per_gene.xlsx``
+       – KofamScan + InterProScan + EggNOG v7
+    2. ``{sample}_combined_kofam_interpro_eggnogv7_fantasia_ProtT5_per_gene.xlsx``
+       – KofamScan + InterProScan + EggNOG v7 + FANTASIA ProtT5
+    """
+    print("\n" + "="*60)
+    print("Combining Annotations Across Tools")
+    print("="*60)
+
+    samples = _detect_samples(output_dir)
+    if not samples:
+        print("No per-gene files found to combine.")
+        return
+
+    print(f"Detected {len(samples)} sample(s): {', '.join(samples)}")
+
+    for sample in samples:
+        _combine_sample(output_dir, sample)
+
+
+def _combine_sample(output_dir: str, sample: str):
+    """Combine annotations for a single sample."""
+    print(f"\n--- Combining annotations for sample: {sample} ---")
+
+    # Per-gene file paths
+    kofam_file = os.path.join(output_dir, f"{sample}_kofamscan_per_gene.xlsx")
+    interpro_file = os.path.join(output_dir, f"{sample}_interproscan_per_gene.xlsx")
+    eggnog_v7_file = os.path.join(output_dir, f"{sample}_eggnog_v7_per_gene.xlsx")
+    fantasia_file = os.path.join(output_dir, f"{sample}_fantasia_ProtT5_per_gene.xlsx")
+
+    # Dictionaries: gene -> set of terms
+    gene_go: Dict[str, set] = {}
+    gene_kegg: Dict[str, set] = {}
+
+    def _ensure_gene(gene: str):
+        gene_go.setdefault(gene, set())
+        gene_kegg.setdefault(gene, set())
+
+    # --- KofamScan (KEGG only) ---
+    if os.path.exists(kofam_file):
+        df = pd.read_excel(kofam_file)
+        for _, row in df.iterrows():
+            gene = str(row.get('gene_name', '')).strip()
+            if not gene or gene == 'nan':
+                continue
+            _ensure_gene(gene)
+            gene_kegg[gene].update(_extract_terms(row.get('KEGG', '')))
+        print(f"  ✓ Loaded KofamScan: {kofam_file}")
+    else:
+        print(f"  ⚠ KofamScan file not found: {kofam_file}")
+
+    # --- InterProScan (GO only) ---
+    if os.path.exists(interpro_file):
+        df = pd.read_excel(interpro_file)
+        for _, row in df.iterrows():
+            gene = str(row.get('gene', '')).strip()
+            if not gene or gene == 'nan':
+                continue
+            _ensure_gene(gene)
+            gene_go[gene].update(_extract_terms(row.get('GO', '')))
+        print(f"  ✓ Loaded InterProScan: {interpro_file}")
+    else:
+        print(f"  ⚠ InterProScan file not found: {interpro_file}")
+
+    # --- EggNOG v7 (GO and KEGG, scores stripped) ---
+    if os.path.exists(eggnog_v7_file):
+        df = pd.read_excel(eggnog_v7_file)
+        for _, row in df.iterrows():
+            gene = str(row.get('gene', '')).strip()
+            if not gene or gene == 'nan':
+                continue
+            _ensure_gene(gene)
+            gene_go[gene].update(
+                _extract_terms(row.get('GOs', ''), separator=';', strip_scores=True)
+            )
+            gene_kegg[gene].update(
+                _extract_terms(row.get('KEGGs', ''), separator=';', strip_scores=True)
+            )
+        print(f"  ✓ Loaded EggNOG v7: {eggnog_v7_file}")
+    else:
+        print(f"  ⚠ EggNOG v7 file not found: {eggnog_v7_file}")
+
+    # --- Build combined KIE DataFrame ---
+    all_genes = sorted(set(list(gene_go.keys()) + list(gene_kegg.keys())))
+    if not all_genes:
+        print("  No genes found across tools – skipping combined outputs.")
+        return
+
+    rows_kie = []
+    for gene in all_genes:
+        rows_kie.append({
+            'gene': gene,
+            'GO': ', '.join(sorted(gene_go.get(gene, set()))),
+            'KEGG': ', '.join(sorted(gene_kegg.get(gene, set()))),
+        })
+    df_kie = pd.DataFrame(rows_kie)
+    output_kie = os.path.join(
+        output_dir, f"{sample}_combined_kofam_interpro_eggnogv7_per_gene.xlsx"
+    )
+    _save_combined_excel(df_kie, output_kie, sheet_name='Combined_KIE')
+
+    # --- Add FANTASIA ProtT5 (GO only) ---
+    gene_go_f = {g: set(terms) for g, terms in gene_go.items()}
+    gene_kegg_f = {g: set(terms) for g, terms in gene_kegg.items()}
+
+    fantasia_found = False
+    if os.path.exists(fantasia_file):
+        df = pd.read_excel(fantasia_file)
+        for _, row in df.iterrows():
+            gene = str(row.get('gene', '')).strip()
+            if not gene or gene == 'nan':
+                continue
+            gene_go_f.setdefault(gene, set())
+            gene_kegg_f.setdefault(gene, set())
+            gene_go_f[gene].update(_extract_terms(row.get('GO', '')))
+        fantasia_found = True
+        print(f"  ✓ Loaded FANTASIA ProtT5: {fantasia_file}")
+    else:
+        print(f"  ⚠ FANTASIA ProtT5 file not found: {fantasia_file} – "
+              "combined KIEF file will equal KIE file.")
+
+    all_genes_f = sorted(set(list(gene_go_f.keys()) + list(gene_kegg_f.keys())))
+    rows_kief = []
+    for gene in all_genes_f:
+        rows_kief.append({
+            'gene': gene,
+            'GO': ', '.join(sorted(gene_go_f.get(gene, set()))),
+            'KEGG': ', '.join(sorted(gene_kegg_f.get(gene, set()))),
+        })
+    df_kief = pd.DataFrame(rows_kief)
+    output_kief = os.path.join(
+        output_dir, f"{sample}_combined_kofam_interpro_eggnogv7_fantasia_ProtT5_per_gene.xlsx"
+    )
+    _save_combined_excel(df_kief, output_kief, sheet_name='Combined_KIEF')
+
+
 def main():
     """Main function"""
     parser = argparse.ArgumentParser(
@@ -1110,6 +1328,9 @@ Examples:
   %(prog)s --interproscan-only
   %(prog)s --eggnog-only
   %(prog)s --fantasia-only
+
+  # Only run the combine step (per-gene files must already exist)
+  %(prog)s --combine-only -o ./excel_outputs
         """
     )
     
@@ -1149,6 +1370,12 @@ Examples:
         help='Process only FANTASIA results'
     )
     
+    parser.add_argument(
+        '--combine-only',
+        action='store_true',
+        help='Only combine existing per-gene Excel files (skip individual tool processing)'
+    )
+    
     args = parser.parse_args()
     
     # Resolve paths
@@ -1165,24 +1392,33 @@ Examples:
     print(f"Output directory:  {output_dir}")
     print()
     
-    if not os.path.exists(results_dir):
-        print(f"Error: Results directory not found: {results_dir}")
-        sys.exit(1)
-    
-    # Process tools based on flags
-    process_all = not any([args.kofamscan_only, args.interproscan_only, args.eggnog_only, args.fantasia_only])
-    
-    if process_all or args.kofamscan_only:
-        process_kofamscan(results_dir, output_dir)
-    
-    if process_all or args.interproscan_only:
-        process_interproscan(results_dir, output_dir)
-    
-    if process_all or args.eggnog_only:
-        process_eggnog(results_dir, output_dir)
-    
-    if process_all or args.fantasia_only:
-        process_fantasia(results_dir, output_dir)
+    if args.combine_only:
+        # Skip individual tool processing, just combine
+        combine_annotations(output_dir)
+    else:
+        if not os.path.exists(results_dir):
+            print(f"Error: Results directory not found: {results_dir}")
+            sys.exit(1)
+
+        # Process tools based on flags
+        process_all = not any([args.kofamscan_only, args.interproscan_only,
+                               args.eggnog_only, args.fantasia_only])
+
+        if process_all or args.kofamscan_only:
+            process_kofamscan(results_dir, output_dir)
+
+        if process_all or args.interproscan_only:
+            process_interproscan(results_dir, output_dir)
+
+        if process_all or args.eggnog_only:
+            process_eggnog(results_dir, output_dir)
+
+        if process_all or args.fantasia_only:
+            process_fantasia(results_dir, output_dir)
+
+        # After individual processing, combine annotations
+        if process_all:
+            combine_annotations(output_dir)
     
     print("\n" + "="*60)
     print("Excel Generation Complete")
