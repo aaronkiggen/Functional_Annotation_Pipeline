@@ -1136,7 +1136,7 @@ def _extract_terms(value: str, separator: str = ',', strip_scores: bool = False)
     Returns:
         A set of cleaned, non-empty term strings.
     """
-    if not value or str(value).strip() == '' or str(value) == 'nan':
+    if value is None or pd.isna(value) or str(value).strip() == '':
         return set()
     terms = set()
     for item in str(value).split(separator):
@@ -1257,7 +1257,7 @@ def _combine_sample(output_dir: str, sample: str):
         print(f"  ⚠ EggNOG v7 file not found: {eggnog_v7_file}")
 
     # --- Build combined KIE DataFrame ---
-    all_genes = sorted(set(list(gene_go.keys()) + list(gene_kegg.keys())))
+    all_genes = sorted(gene_go.keys() | gene_kegg.keys())
     if not all_genes:
         print("  No genes found across tools – skipping combined outputs.")
         return
@@ -1295,7 +1295,7 @@ def _combine_sample(output_dir: str, sample: str):
         print(f"  ⚠ FANTASIA ProtT5 file not found: {fantasia_file} – "
               "combined KIEF file will equal KIE file.")
 
-    all_genes_f = sorted(set(list(gene_go_f.keys()) + list(gene_kegg_f.keys())))
+    all_genes_f = sorted(gene_go_f.keys() | gene_kegg_f.keys())
     rows_kief = []
     for gene in all_genes_f:
         rows_kief.append({
