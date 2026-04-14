@@ -21,7 +21,7 @@ module load singularity || true
 
 # Environment and Paths
 source "$(dirname "$0")/../config.env"
-INSTALL_DIR="${HOME}/software/BRAKER4"
+INSTALL_DIR="${VSC_SCRATCH}/software/BRAKER4"
 OUT_DIR="${RESULTS_DIR}/braker4"
 
 cd "${OUT_DIR}"
