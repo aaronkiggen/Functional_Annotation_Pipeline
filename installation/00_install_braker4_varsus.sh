@@ -7,6 +7,9 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# Source the configuration file to load VSC_SCRATCH
+source "$(dirname "$0")/../config.env"
+
 # Define installation directories
 INSTALL_DIR="${VSC_SCRATCH}/software"
 mkdir -p "${INSTALL_DIR}"
