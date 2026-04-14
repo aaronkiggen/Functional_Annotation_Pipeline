@@ -44,13 +44,13 @@ MODEL_NAME_MAPPING = {
 def parse_fasta_for_gene_mapping(fasta_path: str) -> Dict[str, str]:
     """
     Parse FASTA file to create protein-to-gene mapping.
-    Extracts gene information from FASTA headers.
+    Extracts gene information from FASTA headers, now supporting BRAKER4 outputs.
     
     Args:
         fasta_path: Path to protein FASTA file
         
     Returns:
-        Dictionary mapping protein IDs to gene IDs
+        Dictionary mapping protein/transcript IDs to gene IDs
     """
     protein_to_gene = {}
     
@@ -62,16 +62,27 @@ def parse_fasta_for_gene_mapping(fasta_path: str) -> Dict[str, str]:
         for line in f:
             if line.startswith('>'):
                 # Parse header - assuming format like >protein_id gene=gene_id
+                # OR BRAKER4 native format: >g1.t1 (gene is g1, transcript is g1.t1)
                 header = line[1:].strip()
                 parts = header.split()
                 protein_id = parts[0]
                 
-                # Try to extract gene ID from header
                 gene_id = protein_id  # Default to protein ID
+                
+                # 1. Try to extract gene ID from standard key/value headers
+                found_gene_tag = False
                 for part in parts:
                     if part.startswith('gene='):
                         gene_id = part.split('=')[1]
+                        found_gene_tag = True
                         break
+                        
+                # 2. If no `gene=` tag (e.g. BRAKER4/TSEBRA output), parse transcript ID structure
+                if not found_gene_tag:
+                    # In BRAKER4, headers are often >g1.t1 or >jg1.t1
+                    if '.' in protein_id:
+                        # Extract the base gene name up to the last dot (e.g., "g1.t1" -> "g1")
+                        gene_id = protein_id.rsplit('.', 1)[0]
                 
                 protein_to_gene[protein_id] = gene_id
     

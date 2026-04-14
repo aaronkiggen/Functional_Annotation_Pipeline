@@ -8,15 +8,28 @@ This pipeline performs annotation in 6 distinct stages. Each stage is independen
 
 | Step | Tool | Description |
 | :--- | :--- | :--- |
-| **01** | **Python/Biopython** | Extraction of longest isoforms/primary transcripts |
-| **02** | **KofamScan** | KEGG Orthology annotation using HMM profiles |
-| **03** | **InterProScan** | Domain and motif classification (Pfam, SUPERFAMILY, etc.) |
-| **04** | **EggNOG-mapper / [eggnog7_annotator](https://github.com/fischuu/eggnog7_annotator)** | Orthology prediction and functional annotation (v5 and v7) |
-| **05** | **OrthoFinder** | Phylogenetic orthology inference |
-| **06** | **FANTASIA** | AI-driven functional annotation (GPU accelerated) |
-| **07** | **INTEGRATION** | functional annotation integration and generation of output files |
+| **01** | **Bash/Python** | Configuration generation (`samples.csv`, `config.ini`) and reference DB downloads |
+| **02** | **BRAKER4/VARSUS** | Primary transcript creation via auto-retrieved SRA RNA-seq, and FANTASIA Deep Learning prediction |
+| **03** | **OrthoFinder / Python** | Single-baseline (`_prot`) orthology inference & comprehensive QC statistic aggregation |
+| **04** | **KofamScan & InterPro** | Domain and motif classification against Pfam, SUPERFAMILY, KEGG HMM profiles |
+| **05** | **EggNOG-mapper** | Standardized Orthology prediction and functional annotation |
+| **06** | **INTEGRATION** | Wang Semantic Similarity GO evaluation, unifying FANTASIA vs. Classical predictions into structured DataFrames |
 
 ## ⚙️ Requirements
+
+### Required Inputs & Databases
+To run this pipeline, you must provide the following inputs and ensure the backend databases are accessible.
+
+**1. User-Provided Inputs:**
+- **Genome Assemblies:** Raw unmasked genome `.fa` files (e.g., `Daphnia_pulex.fa`). The pipeline handles repeat-masking natively.
+- **Species Metadata:** Genus and species names (e.g., `Daphnia` and `pulex`). Used by the pipeline to automatically download the best available RNA-seq evidence from the NCBI SRA via VARSUS.
+
+**2. Required Databases (Downloaded during setup):**
+- **OrthoDB Protein Partition:** A high-confidence protein reference database for your specific clade (e.g., `Arthropoda.fa` from OrthoDB v12). The preparation script (`scripts/01_prep_braker4.sh`) auto-downloads this.
+- **EggNOG Mapper Data:** The generic `eggnog_proteins.dmnd` and `eggnog.db` files.
+- **InterProScan & KofamScan DBs:** Local HMM profiles and InterPro databases (Pfam, Panther, etc.).
+- **FANTASIA Models:** The ProtT5 Deep Learning weights are automatically pulled and managed by the BRAKER4 Apptainer/Singularity container on first run.
+- **Gene Ontology (GO) Hierarchy:** The latest `go-basic.obo` is automatically fetched during the QC steps to calculate Wang Semantic Similarity scores.
 
 ### System Requirements
 
@@ -60,37 +73,28 @@ For detailed installation instructions for each tool, see the respective readthe
 
 ## 🚀 Usage
 
-Submit jobs individually using `sbatch`. Ensure you are in the `scripts/` directory.
+Submit jobs individually using `sbatch`. Ensure you are in the `scripts/` directory. 
 
 ### Basic Workflow
 
 ```bash
 cd scripts/
 
-# 1. Clean input data
-sbatch 01_extract_longest_isoform.sh
+# 1. Prepare Genomes & Configure BRAKER4
+# Downloads OrthoDB proteins and creates samples.csv mapping
+bash 01_prep_braker4.sh
 
-# 2. Run functional annotations (can run in parallel)
-sbatch 02_run_kofamscan.sh
-sbatch 03_run_interproscan.sh
-sbatch 04_run_eggnog.sh
-sbatch 04_run_eggnog.sh
-sbatch 04_2_run_eggnog7_annotator.sh
+# 2. Base Annotation (BRAKER4 + VARSUS RNA-seq + FANTASIA)
+sbatch 02_run_braker4_slurm.sh
+sbatch 02b_run_orthofinder.sh
+python3 03_step1_summary.py --braker_dir ../results/braker4/output --orthofinder_dir ../results/orthofinder --output ../results/Step1_Summary.xlsx
 
-# 3. Comparative Genomics
-sbatch 05_run_orthofinder.sh
+# 3. Extra Functional Annotations (EggNOG, InterProScan, KofamScan)
+sbatch 04_run_step2_functional.sh
 
-# 4. Deep Learning Annotation
-sbatch 06_run_fantasia.slurm
-
-# 5. Integration - Generate Excel outputs
-cd INTEGRATION
-python create_excel_outputs.py
-
-# 6. (Optional) Filter FANTASIA results
-python filter_fantasia_results.py \
-  --summary ../../results/fantasia/sample.tsv \
-  --excel-dir excel_outputs/
+# 4. Deep Integration & QC Evaluation
+# Integrates all Excel sheets and computes Semantic Wang GO-Similarity
+sbatch 06_run_step3_integration.sh
 ```
 
 ## 📖 Documentation
