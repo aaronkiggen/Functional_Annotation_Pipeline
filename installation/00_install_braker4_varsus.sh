@@ -35,7 +35,7 @@ cd BRAKER4
 echo "Setting up Snakemake environment via Conda (requires Python 3.11+)..."
 # Source conda appropriately
 source /data/leuven/354/vsc35429/miniconda3/etc/profile.d/conda.sh
-conda create -n braker_snakemake python=3.11 -y
+conda create -n braker_snakemake -c conda-forge -c defaults python=3.11 -y
 conda activate braker_snakemake
 pip install --upgrade pip
 pip install snakemake==8.18.2
