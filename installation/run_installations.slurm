@@ -2,8 +2,9 @@
 #SBATCH --job-name=pipeline_installation
 #SBATCH --output=logs/install_%j.out
 #SBATCH --error=logs/install_%j.err
+#SBATCH --cluster=wice
+#SBATCH -A lp_svbelleghem
 #SBATCH --time=12:00:00
-#SBATCH --partition=batch
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
