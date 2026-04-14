@@ -24,7 +24,7 @@ nano config.env
 
 Key variables to configure:
 - `PROJECT_ROOT`: Root directory of the pipeline
-- `DB_ROOT`: Where databases will be stored (default: `${HOME}/databases`)
+- `DB_ROOT`: Where databases will be stored (default: `${VSC_SCRATCH}/databases`)
 - `INTERPROSCAN_HOME`: InterProScan installation path
 - `EGGNOG7_SCRIPT`: EggNOG7 annotator script path
 
@@ -32,9 +32,24 @@ Key variables to configure:
 
 Follow these steps in order:
 
-### 1. Environments and Databases (Main Script)
+### 1. BRAKER4 and VARSUS (Structural Engine)
 
-This is the primary installation script that sets up Conda environments and downloads databases for KofamScan, EggNOG-mapper (v5 & v7), and OrthoFinder.
+This script installs the core BRAKER4 structural annotation engine with native FANTASIA AI and VARSUS RNA-seq support via Snakemake.
+
+```bash
+./00_install_braker4_varsus.sh
+```
+
+**What it does:**
+- Creates a dedicated Snakemake environment
+- Clones BRAKER4 and configures the SLURM executor plugin
+- Prepares Apptainer cache directories
+
+**Time estimate:** 5 minutes
+
+### 2. Environments and Databases (Main Script)
+
+This downstream script sets up Conda environments and downloads databases for KofamScan, EggNOG-mapper (v5 & v7), and OrthoFinder.
 
 ```bash
 ./environments_and_databases
@@ -62,21 +77,6 @@ Install InterProScan for domain and motif analysis:
 - Runs a test to verify installation
 
 **Time estimate:** 30-60 minutes
-
-### 3. FANTASIA (Optional)
-
-FANTASIA is for AI-driven annotation using GPUs. This script provides instructions rather than automated installation:
-
-```bash
-./FANTASIA
-```
-
-**What it provides:**
-- Step-by-step instructions for setting up FANTASIA
-- Configuration guidance
-- Links to documentation
-
-**Note:** FANTASIA requires GPU resources and is more complex. Follow the interactive guide carefully.
 
 ## Script Features
 
@@ -128,7 +128,7 @@ source ~/.bashrc
 ### Permission errors
 Make sure scripts are executable (run from project root):
 ```bash
-chmod +x installation/environments_and_databases installation/interproscan installation/FANTASIA
+chmod +x installation/00_install_braker4_varsus.sh installation/environments_and_databases installation/interproscan
 ```
 
 ## Additional Resources
@@ -137,7 +137,7 @@ chmod +x installation/environments_and_databases installation/interproscan insta
 - [Documentation Directory](../docs/) - Detailed guides for each tool
 - [EggNOG-mapper docs](https://github.com/eggnogdb/eggnog-mapper/wiki)
 - [InterProScan docs](https://interproscan-docs.readthedocs.io/)
-- [FANTASIA docs](https://fantasia.readthedocs.io/)
+- [BRAKER4 docs](https://github.com/Gaius-Augustus/BRAKER4)
 
 ## Support
 
