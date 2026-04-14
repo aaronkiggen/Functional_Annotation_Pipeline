@@ -29,7 +29,7 @@ cd "${OUT_DIR}"
 echo "Starting BRAKER4 Pipeline..."
 
 # Activate the Snakemake Conda environment
-source "$(conda info --base)/etc/profile.d/conda.sh"
+source /data/leuven/354/vsc35429/miniconda3/etc/profile.d/conda.sh
 conda activate braker_snakemake
 
 # We use Snakemake to manage SLURM jobs from here. The actual Snakemake master process 

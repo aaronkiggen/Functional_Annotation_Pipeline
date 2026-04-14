@@ -31,6 +31,9 @@ echo "Target Scratch Path: ${VSC_SCRATCH}"
 # Load necessary modules if required by your HPC
 module load singularity || true
 
+# Initialize conda within the compute node shell explicitly
+source /data/leuven/354/vsc35429/miniconda3/etc/profile.d/conda.sh
+
 echo ""
 echo "------------------------------------------------------------"
 echo " [1/3] Installing BRAKER4 and Snakemake Virtual Environment"
