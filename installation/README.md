@@ -131,6 +131,17 @@ Make sure scripts are executable (run from project root):
 chmod +x installation/00_install_braker4_varsus.sh installation/environments_and_databases installation/interproscan
 ```
 
+## Running the Complete Installation via SLURM
+
+Because these installations extract large database architectures and compile dependencies, they are now strictly offloaded to a designated compute node instead of the user login shell.
+
+To queue all 3 components seamlessly:
+```bash
+cd /user/leuven/354/vsc35429/DATA/PhD/Functional_Annotation_Pipeline
+sbatch -M <your_cluster_id> installation/run_installations.slurm
+```
+*Note: Make sure your `config.env` aligns correctly with your `$VSC_SCRATCH` targets before submission.*
+
 ## Additional Resources
 
 - [Pipeline README](../README.md) - Main pipeline documentation
