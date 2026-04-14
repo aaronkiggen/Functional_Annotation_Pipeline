@@ -32,9 +32,11 @@ fi
 cd BRAKER4
 
 # 2. Setup Snakemake environment
-echo "Setting up Snakemake environment..."
-python3 -m venv snakemake_env
-source snakemake_env/bin/activate
+echo "Setting up Snakemake environment via Conda (requires Python 3.11+)..."
+# Source conda appropriately
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda create -n braker_snakemake python=3.11 -y
+conda activate braker_snakemake
 pip install --upgrade pip
 pip install snakemake==8.18.2
 pip install snakemake-executor-plugin-slurm==2.6.0

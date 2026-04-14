@@ -28,8 +28,9 @@ cd "${OUT_DIR}"
 
 echo "Starting BRAKER4 Pipeline..."
 
-# Activate the Snakemake virtual environment
-source "${INSTALL_DIR}/snakemake_env/bin/activate"
+# Activate the Snakemake Conda environment
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate braker_snakemake
 
 # We use Snakemake to manage SLURM jobs from here. The actual Snakemake master process 
 # runs on this compute node, and submits jobs to the cluster.
