@@ -60,8 +60,7 @@ for SAMPLE_DIR in "${BRAKER_DIR}"/*; do
         
         if [ -f "${BRAKER_GFF}" ] && [ -f "${EGGNOG_ANNO}" ] && [ -f "${IPS_TSV}" ]; then
             echo "Computing Wang Semantic Similarities for ${SAMPLE_NAME}..."
-            python3 "${PIPELINE_DIR}/scripts/05_step3_go_qc_metrics.py" \
-                --fantasia_gff "${BRAKER_GFF}" \
+            Rscript "${PIPELINE_DIR}/scripts/05_step3_gosemsim_metrics.R" \
                 --eggnog "${EGGNOG_ANNO}" \
                 --ips "${IPS_TSV}" \
                 --output "${OUT_EXCEL}"
