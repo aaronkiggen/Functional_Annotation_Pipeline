@@ -28,6 +28,9 @@ else
     DB_ROOT="${HOME}/databases"
 fi
 
+# Explicitly source Conda profile to ensure 'conda' command works in sub-shell
+source /data/leuven/354/vsc35429/miniconda3/etc/profile.d/conda.sh
+
 echo ""
 echo "============================================================"
 echo " Setting Up Conda Environments and Databases"
