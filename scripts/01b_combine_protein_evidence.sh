@@ -11,7 +11,7 @@ set -e
 source "$(dirname "$0")/../config.env"
 
 BRAKER_OUT_DIR="${RESULTS_DIR}/braker4"
-CUSTOM_PROT_DIR="${VSC_SCRATCH}/custom_proteins"
+CUSTOM_PROT_DIR="${PIPELINE_SCRATCH}/custom_proteins"
 ORTHODB_FA="${BRAKER_OUT_DIR}/Arthropoda.fa"
 COMBINED_FA="${BRAKER_OUT_DIR}/custom_evidence.fa"
 

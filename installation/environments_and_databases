@@ -46,9 +46,9 @@ mkdir -p "${DB_ROOT}"
 ################################################################################
 # 1. KofamScan Environment and Database
 ################################################################################
-# Ensure Conda creates environments in VSC_SCRATCH
-mkdir -p "${VSC_SCRATCH}/conda_envs"
-conda config --add envs_dirs "${VSC_SCRATCH}/conda_envs"
+# Ensure Conda creates environments in PIPELINE_SCRATCH
+mkdir -p "${PIPELINE_SCRATCH}/conda_envs"
+conda config --add envs_dirs "${PIPELINE_SCRATCH}/conda_envs"
 
 echo ""
 echo "------------------------------------------------------------"

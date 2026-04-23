@@ -11,13 +11,13 @@ set -e
 source "$(dirname "$0")/../config.env"
 
 # Define installation directories
-INSTALL_DIR="${VSC_SCRATCH}/software"
+INSTALL_DIR="${PIPELINE_SCRATCH}/software"
 mkdir -p "${INSTALL_DIR}"
 cd "${INSTALL_DIR}"
 
 # Set Singularity/Apptainer cache to scratch to prevent filling up $HOME
-export APPTAINER_CACHEDIR="${VSC_SCRATCH}/apptainer_cache"
-export SINGULARITY_CACHEDIR="${VSC_SCRATCH}/apptainer_cache"
+export APPTAINER_CACHEDIR="${PIPELINE_SCRATCH}/apptainer_cache"
+export SINGULARITY_CACHEDIR="${PIPELINE_SCRATCH}/apptainer_cache"
 mkdir -p "${APPTAINER_CACHEDIR}"
 
 echo "========================================"
@@ -43,15 +43,6 @@ pip install snakemake-executor-plugin-slurm==2.6.0
 
 echo "Snakemake installation complete."
 echo "Note: BRAKER4 will automatically pull Singularity containers (including VARSUS and FANTASIA-Lite) on the first run."
-
-echo "========================================"
-echo " Installing OrthoFinder (If needed)     "
-echo "========================================"
-# Ensure Conda creates environments in VSC_SCRATCH
-mkdir -p "${VSC_SCRATCH}/conda_envs"
-# Update conda config to use this directory by default for new envs
-conda config --add envs_dirs "${VSC_SCRATCH}/conda_envs"
-conda create -n of3 -c bioconda orthofinder -y
 
 echo "========================================"
 echo "Installation structure prepared.        "
